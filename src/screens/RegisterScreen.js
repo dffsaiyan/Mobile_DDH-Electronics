@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Image,
-  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions
+  ScrollView, StatusBar, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
@@ -21,23 +21,35 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+  const [message, setMessage] = useState('');
 
   const handleRegister = async () => {
+    setStatus(null);
+    setMessage('');
+
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ thông tin.');
+      setStatus('error');
+      setMessage('Vui lòng nhập đầy đủ thông tin.');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp.');
+      setStatus('error');
+      setMessage('Mật khẩu xác nhận không khớp.');
       return;
     }
+    
     setLoading(true);
     const result = await register(name, email, password, confirmPassword);
     setLoading(false);
+    
     if (!result.success) {
-      Alert.alert('Đăng ký thất bại', result.message);
+      setStatus('error');
+      setMessage(result.message || 'Đăng ký thất bại.');
     } else {
-      navigation.navigate('HomeTabs');
+      setStatus('success');
+      setMessage('Gia nhập Elite thành công! Đang chuyển hướng...');
+      setTimeout(() => navigation.navigate('HomeTabs'), 1000);
     }
   };
 
@@ -97,9 +109,24 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.formTitle}>Đăng Ký</Text>
             <Text style={styles.formSubtitle}>Khởi tạo tài khoản DDH-Elite của riêng bạn</Text>
 
+            {/* 💎 PREMIUM STATUS MESSAGE BOX */}
+            {status && (
+              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
+                <Icon 
+                  name={status === 'success' ? "check-circle" : "exclamation-circle"} 
+                  size={16} 
+                  color={status === 'success' ? "#15803d" : "#b91c1c"} 
+                  style={{ marginRight: 10 }}
+                />
+                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
+                  {message}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>HỌ VÀ TÊN</Text>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && !name.trim() && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="user" size={16} color="#666" />
                 </View>
@@ -114,7 +141,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>EMAIL</Text>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && !email.trim() && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="envelope" size={16} color="#666" />
                 </View>
@@ -131,7 +158,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>MẬT KHẨU</Text>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && !password.trim() && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="lock" size={18} color="#666" />
                 </View>
@@ -150,7 +177,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>XÁC NHẬN MẬT KHẨU</Text>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && password !== confirmPassword && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="check-circle" size={18} color="#666" />
                 </View>
@@ -250,8 +277,23 @@ const styles = StyleSheet.create({
 
   formContainer: { paddingHorizontal: 25, marginTop: 10 },
   formTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'center' },
-  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 25 },
+  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 20 },
   
+  // STATUS BOX STYLES
+  statusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+  },
+  successBox: { backgroundColor: '#f0fdf4', borderColor: '#dcfce7' },
+  errorBox: { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
+  statusText: { flex: 1, fontSize: 12, fontWeight: '600' },
+  successText: { color: '#15803d' },
+  errorText: { color: '#b91c1c' },
+
   inputWrapper: { marginBottom: 15 },
   label: { fontSize: 11, fontWeight: '800', color: '#64748b', marginBottom: 8, letterSpacing: 0.5 },
   inputContainer: {

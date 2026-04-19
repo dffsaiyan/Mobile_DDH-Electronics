@@ -20,11 +20,19 @@ export const CartProvider = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
-        // Fetch from API if logged in
-        const response = await apiClient.get('/v1/cart');
-        if (response.data.success) {
-          setCartItems(response.data.data);
-          return;
+        try {
+          // Fetch from API if logged in
+          const response = await apiClient.get('/v1/cart');
+          if (response.data.success) {
+            setCartItems(response.data.data);
+            setLoading(false);
+            return;
+          }
+        } catch (apiError) {
+          // If 401 (Unauthorized), just proceed to local storage
+          if (apiError.response?.status !== 401) {
+            console.error('API Cart Error:', apiError.message);
+          }
         }
       }
       

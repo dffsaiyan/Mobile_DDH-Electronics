@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Image,
-  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal, Dimensions
+  ScrollView, StatusBar, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
@@ -27,6 +27,8 @@ const LoginScreen = ({ navigation }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+  const [message, setMessage] = useState('');
   
   // Social Login State
   const [socialModalVisible, setSocialModalVisible] = useState(false);
@@ -34,17 +36,26 @@ const LoginScreen = ({ navigation }) => {
   const webViewRef = useRef(null);
 
   const handleLogin = async () => {
+    setStatus(null);
+    setMessage('');
+
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập email và mật khẩu.');
+      setStatus('error');
+      setMessage('Vui lòng nhập đầy đủ email và mật khẩu.');
       return;
     }
+    
     setLoading(true);
     const result = await login(email, password);
     setLoading(false);
+    
     if (!result.success) {
-      Alert.alert('Đăng nhập thất bại', result.message);
+      setStatus('error');
+      setMessage(result.message || 'Đăng nhập thất bại.');
     } else {
-      navigation.navigate('HomeTabs');
+      setStatus('success');
+      setMessage('Đăng nhập thành công! Đang chuyển hướng...');
+      setTimeout(() => navigation.navigate('HomeTabs'), 1000);
     }
   };
 
@@ -70,11 +81,13 @@ const LoginScreen = ({ navigation }) => {
           await socialLogin(user, token);
           navigation.navigate('HomeTabs');
         } else {
-          Alert.alert('Lỗi', 'Không thể lấy thông tin đăng nhập từ mạng xã hội.');
+          setStatus('error');
+          setMessage('Không thể lấy thông tin đăng nhập từ mạng xã hội.');
         }
       } catch (error) {
         console.error('Social Token Error:', error);
-        Alert.alert('Lỗi', 'Phiên đăng nhập hết hạn hoặc có lỗi xảy ra.');
+        setStatus('error');
+        setMessage('Phiên đăng nhập hết hạn hoặc có lỗi xảy ra.');
       } finally {
         setLoading(false);
       }
@@ -125,10 +138,6 @@ const LoginScreen = ({ navigation }) => {
                   <Text style={styles.benefitText}>Miễn phí vận chuyển toàn quốc đơn từ 299k.</Text>
                 </View>
                 <View style={styles.benefitItem}>
-                  <Icon name="birthday-cake" size={14} color="#ef4444" style={styles.benefitIcon} />
-                  <Text style={styles.benefitText}>Tặng Voucher 500k trong tháng sinh nhật.</Text>
-                </View>
-                <View style={styles.benefitItem}>
                   <Icon name="shield" size={14} color="#22c55e" style={styles.benefitIcon} />
                   <Text style={styles.benefitText}>Đặc quyền 1 đổi 1 trong 45 ngày đầu tiên.</Text>
                 </View>
@@ -141,9 +150,24 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.formTitle}>Đăng Nhập</Text>
             <Text style={styles.formSubtitle}>Chào mừng quay trở lại với kỷ nguyên số DDH</Text>
 
+            {/* 💎 PREMIUM STATUS MESSAGE BOX */}
+            {status && (
+              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
+                <Icon 
+                  name={status === 'success' ? "check-circle" : "exclamation-circle"} 
+                  size={16} 
+                  color={status === 'success' ? "#15803d" : "#b91c1c"} 
+                  style={{ marginRight: 10 }}
+                />
+                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
+                  {message}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>EMAIL</Text>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && !email.trim() && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="envelope" size={16} color="#666" />
                 </View>
@@ -165,7 +189,7 @@ const LoginScreen = ({ navigation }) => {
                   <Text style={styles.forgotText}>Quên mật khẩu?</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, status === 'error' && !password.trim() && { borderColor: '#ef4444' }]}>
                 <View style={styles.inputIcon}>
                   <Icon name="lock" size={18} color="#666" />
                 </View>
@@ -285,7 +309,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   
   benefitsContainer: {
-    height: 220,
+    height: 200,
     margin: 15,
     borderRadius: 20,
     overflow: 'hidden',
@@ -326,9 +350,24 @@ const styles = StyleSheet.create({
 
   formContainer: { paddingHorizontal: 25, marginTop: 10 },
   formTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'center' },
-  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 30 },
+  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 20 },
   
-  inputWrapper: { marginBottom: 20 },
+  // STATUS BOX STYLES
+  statusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+  },
+  successBox: { backgroundColor: '#f0fdf4', borderColor: '#dcfce7' },
+  errorBox: { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
+  statusText: { flex: 1, fontSize: 12, fontWeight: '600' },
+  successText: { color: '#15803d' },
+  errorText: { color: '#b91c1c' },
+
+  inputWrapper: { marginBottom: 15 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   label: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 0.5 },
   forgotText: { fontSize: 12, color: '#f97316', fontWeight: '600' },
@@ -346,7 +385,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 15, color: '#1e293b' },
   eyeIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
 
-  rememberContainer: { marginBottom: 25 },
+  rememberContainer: { marginBottom: 20 },
   checkboxRow: { flexDirection: 'row', alignItems: 'center' },
   checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   checkboxActive: { backgroundColor: '#f97316', borderColor: '#f97316' },
@@ -366,7 +405,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold', letterSpacing: 1 },
   
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 30 },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
   line: { flex: 1, height: 1, backgroundColor: '#f1f5f9' },
   dividerText: { marginHorizontal: 10, color: '#94a3b8', fontSize: 11 },
   
@@ -388,9 +427,9 @@ const styles = StyleSheet.create({
   },
   socialImg: { width: 28, height: 28, resizeMode: 'contain' },
   
-  registerContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
+  registerContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   registerText: { color: '#64748b', fontSize: 13 },
-  registerLink: { color: '#007bff', fontWeight: 'bold', fontSize: 13 },
+  registerLink: { color: '#3b82f6', fontWeight: 'bold', fontSize: 13 },
   
   modalHeader: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
