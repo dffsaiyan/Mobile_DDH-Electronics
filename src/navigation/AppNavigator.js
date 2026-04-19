@@ -18,6 +18,7 @@ import CartScreen from '../screens/CartScreen';
 import AccountScreen from '../screens/AccountScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ProfileEditScreen from '../screens/ProfileEditScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen';
@@ -98,6 +99,7 @@ const AppNavigator = () => {
         <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Orders" component={OrdersScreen} />
         <Stack.Screen name="Wishlist" component={WishlistScreen} />
       </Stack.Navigator>

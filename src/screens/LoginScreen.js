@@ -10,15 +10,21 @@ import { useAuth } from '../context/AuthContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 import { WebView } from 'react-native-webview';
 import apiClient from '../api/apiClient';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { FontAwesome as Icon } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
+
+// Standard user agent to bypass Google 403 disallowed_useragent
+const USER_AGENT = Platform.OS === 'ios' 
+  ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  : 'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36';
 
 const LoginScreen = ({ navigation }) => {
   const { login, socialLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -139,7 +145,7 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.label}>EMAIL</Text>
               <View style={styles.inputContainer}>
                 <View style={styles.inputIcon}>
-                  <Icon name="envelope-o" size={16} color="#666" />
+                  <Icon name="envelope" size={16} color="#666" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -153,7 +159,12 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>MẬT KHẨU</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>MẬT KHẨU</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+                  <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.inputContainer}>
                 <View style={styles.inputIcon}>
                   <Icon name="lock" size={18} color="#666" />
@@ -171,6 +182,19 @@ const LoginScreen = ({ navigation }) => {
               </View>
             </View>
 
+            <View style={styles.rememberContainer}>
+              <TouchableOpacity 
+                style={styles.checkboxRow} 
+                onPress={() => setRememberMe(!rememberMe)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                  {rememberMe && <Icon name="check" size={10} color="#fff" />}
+                </View>
+                <Text style={styles.rememberText}>Ghi nhớ đăng nhập</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity 
               style={styles.loginButton} 
               onPress={handleLogin}
@@ -179,7 +203,10 @@ const LoginScreen = ({ navigation }) => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.loginButtonText}>ĐĂNG NHẬP</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="sign-in" size={18} color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={styles.loginButtonText}>ĐĂNG NHẬP</Text>
+                </View>
               )}
             </TouchableOpacity>
 
@@ -192,14 +219,14 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.socialContainer}>
               <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('google')}>
                 <Image 
-                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png' }} 
+                  source={{ uri: `${IMAGE_BASE_URL}/images/google_icon.png` }} 
                   style={styles.socialImg} 
                 />
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('zalo')}>
                 <Image 
-                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Zalo_logo.svg/1200px-Zalo_logo.svg.png' }} 
+                  source={{ uri: `${IMAGE_BASE_URL}/images/zalo_icon.png` }} 
                   style={styles.socialImg} 
                 />
               </TouchableOpacity>
@@ -231,6 +258,7 @@ const LoginScreen = ({ navigation }) => {
             onNavigationStateChange={onNavigationStateChange}
             javaScriptEnabled={true}
             domStorageEnabled={true}
+            userAgent={USER_AGENT}
             startInLoadingState={true}
             renderLoading={() => <ActivityIndicator size="large" color={Colors.primary} style={styles.webViewLoading} />}
           />
@@ -301,7 +329,9 @@ const styles = StyleSheet.create({
   formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 30 },
   
   inputWrapper: { marginBottom: 20 },
-  label: { fontSize: 11, fontWeight: '800', color: '#64748b', marginBottom: 8, letterSpacing: 0.5 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  label: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 0.5 },
+  forgotText: { fontSize: 12, color: '#f97316', fontWeight: '600' },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,17 +339,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    height: 56,
+    overflow: 'hidden',
   },
-  inputIcon: { paddingHorizontal: 15 },
-  input: { flex: 1, paddingVertical: 12, fontSize: 14, color: '#1e293b' },
-  eyeIcon: { paddingHorizontal: 15 },
+  inputIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, fontSize: 15, color: '#1e293b' },
+  eyeIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
+
+  rememberContainer: { marginBottom: 25 },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center' },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  checkboxActive: { backgroundColor: '#f97316', borderColor: '#f97316' },
+  rememberText: { fontSize: 13, color: '#64748b' },
 
   loginButton: {
     backgroundColor: '#f97316',
     borderRadius: 50,
     padding: 15,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 0,
     shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

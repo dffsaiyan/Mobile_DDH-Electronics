@@ -13,10 +13,6 @@ import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { useWishlist } from '../context/WishlistContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const { width, height } = Dimensions.get('window');
 const CARD_W = (width - Spacing.m * 3) / 2;
 
@@ -118,6 +114,20 @@ const HomeScreen = ({ navigation }) => {
       return () => clearInterval(timer);
     }
   }, [data?.flash_sale_end]);
+
+  // 🎡 AUTOPLAY SLIDER LOGIC
+  useEffect(() => {
+    if (data?.slides?.length > 0) {
+      const interval = setInterval(() => {
+        const nextSlide = (activeSlide + 1) % data.slides.length;
+        if (sliderRef.current) {
+          sliderRef.current.scrollTo({ x: nextSlide * width, animated: true });
+          setActiveSlide(nextSlide);
+        }
+      }, 4000); // Auto scroll every 4 seconds
+      return () => clearInterval(interval);
+    }
+  }, [activeSlide, data?.slides]);
 
   // LIVE SEARCH LOGIC
   useEffect(() => {

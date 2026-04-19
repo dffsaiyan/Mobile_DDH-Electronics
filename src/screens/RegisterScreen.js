@@ -2,13 +2,16 @@ import * as React from 'react';
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Image,
-  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, Shadow } from '../styles/Theme';
+import { Colors } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
-import { FontAwesome5 as Icon } from '@expo/vector-icons';
+import { FontAwesome as Icon } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
   const { register } = useAuth();
@@ -28,10 +31,6 @@ const RegisterScreen = ({ navigation }) => {
       Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp.');
       return;
     }
-    if (password.length < 8) {
-      Alert.alert('Thông báo', 'Mật khẩu phải có ít nhất 8 ký tự.');
-      return;
-    }
     setLoading(true);
     const result = await register(name, email, password, confirmPassword);
     setLoading(false);
@@ -44,75 +43,84 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      {/* Header with Back Button */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="chevron-left" size={20} color="#333" />
+        </TouchableOpacity>
+        <Image 
+          source={{ uri: `${IMAGE_BASE_URL}/images/logo.jpg` }} 
+          style={styles.headerLogo} 
+          resizeMode="contain" 
+        />
+        <View style={{ width: 40 }} />
+      </View>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-          {/* ── HEADER ── */}
-          <View style={styles.headerSection}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Icon name="arrow-left" size={16} color={Colors.primary} />
-            </TouchableOpacity>
-            
-            <View style={styles.brandingRow}>
-                <Image 
-                source={{ uri: `${IMAGE_BASE_URL}/images/logo.jpg` }} 
-                style={styles.logoElite} 
-                resizeMode="contain" 
-                />
-                <View style={styles.mascotSmallContainer}>
-                    <Image 
-                    source={{ uri: `${IMAGE_BASE_URL}/images/auth_mascot.png` }} 
-                    style={styles.mascotSmall} 
-                    resizeMode="contain" 
-                    />
+          
+          {/* Mascot & Benefits Section */}
+          <View style={styles.benefitsContainer}>
+            <Image 
+              source={{ uri: `${IMAGE_BASE_URL}/images/auth_mascot.png` }} 
+              style={styles.mascotBg} 
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['rgba(15, 23, 42, 0.85)', 'rgba(249, 115, 22, 0.4)']}
+              style={styles.benefitCard}
+            >
+              <Text style={styles.benefitTitle}>GIA NHẬP <Text style={{color: '#fbbf24'}}>DDH-ELITE</Text></Text>
+              <Text style={styles.benefitSubtitle}>Mở khóa vạn đặc quyền công nghệ</Text>
+              
+              <View style={styles.benefitList}>
+                <View style={styles.benefitItem}>
+                  <Icon name="star" size={14} color="#fbbf24" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Tích điểm Elite cho mỗi đơn hàng.</Text>
                 </View>
-            </View>
-            
-            <Text style={styles.title}>Đăng Ký Tài Khoản</Text>
-            <Text style={styles.subtitle}>Gia nhập cộng đồng DDH Elite để nhận đặc quyền</Text>
+                <View style={styles.benefitItem}>
+                  <Icon name="gift" size={14} color="#3b82f6" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Nhận quà tặng VIP vào dịp sinh nhật.</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Icon name="support" size={14} color="#22c55e" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Hỗ trợ kỹ thuật ưu tiên 24/7.</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
 
-          {/* ── BENEFITS MINI ── */}
-          <View style={styles.benefitsMiniCard}>
-            <View style={styles.benefitItem}>
-                <Icon name="check-circle" size={14} color="#fbbf24" />
-                <Text style={styles.benefitText}>Bảo hành 24 tháng</Text>
-            </View>
-            <View style={styles.benefitItem}>
-                <Icon name="check-circle" size={14} color="#fbbf24" />
-                <Text style={styles.benefitText}>Tích điểm đổi quà</Text>
-            </View>
-            <View style={styles.benefitItem}>
-                <Icon name="check-circle" size={14} color="#fbbf24" />
-                <Text style={styles.benefitText}>Ưu đãi Member Day</Text>
-            </View>
-          </View>
+          {/* Register Form Section */}
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>Đăng Ký</Text>
+            <Text style={styles.formSubtitle}>Khởi tạo tài khoản DDH-Elite của riêng bạn</Text>
 
-          {/* ── FORM ── */}
-          <View style={styles.formSection}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>HỌ VÀ TÊN</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="user" size={14} color={Colors.muted} style={styles.prefixIcon} />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>HỌ VÀ TÊN</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="user" size={16} color="#666" />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="Nguyễn Văn A"
-                  placeholderTextColor="rgba(15, 23, 42, 0.3)"
                   value={name}
                   onChangeText={setName}
                 />
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>EMAIL</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="envelope" size={14} color={Colors.muted} style={styles.prefixIcon} />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>EMAIL</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="envelope" size={16} color="#666" />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="nhapemail@domain.com"
-                  placeholderTextColor="rgba(15, 23, 42, 0.3)"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -121,32 +129,34 @@ const RegisterScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MẬT KHẨU MỚI</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="lock" size={14} color={Colors.muted} style={styles.prefixIcon} />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>MẬT KHẨU</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="lock" size={18} color="#666" />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
-                  placeholderTextColor="rgba(15, 23, 42, 0.3)"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.suffixBtn}>
-                  <Icon name={showPassword ? 'eye' : 'eye-slash'} size={14} color={Colors.muted} />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Icon name={showPassword ? "eye-slash" : "eye"} size={16} color="#666" />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>XÁC NHẬN LẠI</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="check-double" size={14} color={Colors.muted} style={styles.prefixIcon} />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>XÁC NHẬN MẬT KHẨU</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="check-circle" size={18} color="#666" />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
-                  placeholderTextColor="rgba(15, 23, 42, 0.3)"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showPassword}
@@ -154,34 +164,27 @@ const RegisterScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[styles.registerBtn, loading && styles.registerBtnDisabled]}
+            <TouchableOpacity 
+              style={styles.registerButton} 
               onPress={handleRegister}
               disabled={loading}
-              activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator color={Colors.white} />
+                <ActivityIndicator color="#fff" />
               ) : (
-                <>
-                    <Icon name="user-plus" size={14} color={Colors.white} style={{marginRight: 10}} />
-                    <Text style={styles.registerBtnText}>ĐĂNG KÝ NGAY</Text>
-                </>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="user-plus" size={18} color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={styles.registerButtonText}>ĐĂNG KÝ NGAY</Text>
+                </View>
               )}
             </TouchableOpacity>
-          </View>
 
-          {/* ── LOGIN LINK ── */}
-          <View style={styles.loginRow}>
-            <Text style={styles.loginLabel}>Đã có tài khoản? </Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.loginLink}>Đăng nhập ngay</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.securityNote}>
-              <Icon name="shield-alt" size={12} color={Colors.muted} style={{marginRight: 8}} />
-              <Text style={styles.securityText}>Thông tin của bạn được bảo mật tuyệt đối</Text>
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Bạn đã có tài khoản? </Text>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Text style={styles.loginLink}>Đăng nhập ngay</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
         </ScrollView>
@@ -191,56 +194,97 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  scrollContent: { paddingHorizontal: 30, paddingBottom: 60 },
-
-  headerSection: { paddingTop: 10, paddingBottom: 20 },
-  backBtn: { 
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#f1f5f9', 
-    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
-    borderWidth: 1, borderColor: '#e2e8f0'
+  container: { flex: 1, backgroundColor: '#fff' },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    height: 50,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  brandingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  logoElite: { width: 120, height: 50, borderRadius: 10 },
-  mascotSmallContainer: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f1f5f9' },
-  mascotSmall: { width: '80%', height: '80%' },
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
+  headerLogo: { width: 100, height: 35 },
+  scrollContent: { paddingBottom: 40 },
   
-  title: { fontSize: 26, fontWeight: '900', color: Colors.primary, marginBottom: 8 },
-  subtitle: { fontSize: 13, color: Colors.muted, fontWeight: '600' },
-
-  benefitsMiniCard: { 
-    flexDirection: 'row', justifyContent: 'space-between', backgroundColor: Colors.primary,
-    borderRadius: 16, padding: 15, marginBottom: 25, ...Shadow.small
+  benefitsContainer: {
+    height: 180,
+    margin: 15,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  benefitText: { fontSize: 10, fontWeight: '800', color: Colors.white, textTransform: 'uppercase' },
-
-  formSection: { marginTop: 0 },
-  inputGroup: { marginBottom: 18 },
-  inputLabel: { fontSize: 11, fontWeight: '900', color: Colors.muted, letterSpacing: 1, marginBottom: 8 },
-  inputWrapper: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', 
-    borderRadius: 16, paddingHorizontal: 15, height: 56, 
-    borderWidth: 1, borderColor: '#e2e8f0' 
+  mascotBg: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
   },
-  prefixIcon: { marginRight: 12, opacity: 0.6 },
-  input: { flex: 1, fontSize: 14, fontWeight: '700', color: Colors.primary },
-  suffixBtn: { padding: 5 },
-
-  registerBtn: { 
-    backgroundColor: Colors.secondary, height: 56, borderRadius: 28, 
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', 
-    marginTop: 15, ...Shadow.medium 
+  benefitCard: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#f97316',
+    borderRadius: 20,
   },
-  registerBtnDisabled: { opacity: 0.7 },
-  registerBtnText: { fontSize: 14, fontWeight: '900', color: Colors.white, letterSpacing: 1 },
+  benefitTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  benefitSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginBottom: 15,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  benefitList: { gap: 6 },
+  benefitItem: { flexDirection: 'row', alignItems: 'center' },
+  benefitIcon: { width: 20 },
+  benefitText: { color: '#fff', fontSize: 11, fontWeight: '500' },
 
-  loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 30, marginBottom: 20 },
-  loginLabel: { fontSize: 14, color: Colors.muted, fontWeight: '600' },
-  loginLink: { fontSize: 14, fontWeight: '900', color: '#3b82f6' },
+  formContainer: { paddingHorizontal: 25, marginTop: 10 },
+  formTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'center' },
+  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 25 },
+  
+  inputWrapper: { marginBottom: 15 },
+  label: { fontSize: 11, fontWeight: '800', color: '#64748b', marginBottom: 8, letterSpacing: 0.5 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    height: 56,
+    overflow: 'hidden',
+  },
+  inputIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, fontSize: 15, color: '#1e293b' },
+  eyeIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
 
-  securityNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', opacity: 0.6 },
-  securityText: { fontSize: 11, fontWeight: '700', color: Colors.muted },
+  registerButton: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 50,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 15,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  registerButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold', letterSpacing: 1 },
+  
+  loginContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
+  loginText: { color: '#64748b', fontSize: 13 },
+  loginLink: { color: '#f97316', fontWeight: 'bold', fontSize: 13 },
 });
 
 export default RegisterScreen;
