@@ -244,9 +244,9 @@ const styles = StyleSheet.create({
   guestMascotContainer: { 
     width: 180, height: 180, borderRadius: 90, backgroundColor: '#fff', 
     justifyContent: 'center', alignItems: 'center', ...Shadow.medium,
-    borderWidth: 1, borderColor: '#f1f5f9'
+    borderWidth: 1, borderColor: '#f1f5f9', overflow: 'hidden'
   },
-  guestMascot: { width: '100%', height: '100%', borderRadius: 90, resizeMode: 'cover' },
+  guestMascot: { width: '100%', height: '100%', resizeMode: 'cover' },
   guestContent: { paddingHorizontal: 40, alignItems: 'center' },
   guestTitle: { fontSize: 26, fontWeight: '900', color: Colors.primary, marginBottom: 12, textAlign: 'center' },
   guestSubtitle: { fontSize: 13, color: Colors.muted, textAlign: 'center', marginBottom: 30, lineHeight: 20, fontWeight: '600' },
@@ -274,8 +274,8 @@ const styles = StyleSheet.create({
   profileHeader: { backgroundColor: Colors.white, paddingHorizontal: 25, paddingTop: 20, paddingBottom: 25, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, ...Shadow.small },
   headerTop: { flexDirection: 'row', alignItems: 'center' },
   avatarWrapper: { position: 'relative' },
-  avatarRingOuter: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#f1f5f9', padding: 3 },
-  avatarPremium: { width: '100%', height: '100%', borderRadius: 42, resizeMode: 'cover' },
+  avatarRingOuter: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#f1f5f9', padding: 3, overflow: 'hidden' },
+  avatarPremium: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarPlaceholderPremium: { width: '100%', height: '100%', borderRadius: 42, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
   avatarInitialPremium: { fontSize: 28, fontWeight: '900', color: Colors.white },
   adminVerified: { position: 'absolute', bottom: 5, right: 5, backgroundColor: '#3b82f6', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },

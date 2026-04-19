@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Image,
-  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal
+  ScrollView, StatusBar, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
@@ -11,11 +11,15 @@ import { IMAGE_BASE_URL } from '../api/apiClient';
 import { WebView } from 'react-native-webview';
 import apiClient from '../api/apiClient';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const { login, socialLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Social Login State
@@ -74,41 +78,97 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      {/* Header with Back Button */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="chevron-left" size={20} color="#333" />
+        </TouchableOpacity>
+        <Image 
+          source={{ uri: `${IMAGE_BASE_URL}/images/logo.jpg` }} 
+          style={styles.headerLogo} 
+          resizeMode="contain" 
+        />
+        <View style={{ width: 40 }} />
+      </View>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          <View style={styles.header}>
+          {/* Mascot & Benefits Section */}
+          <View style={styles.benefitsContainer}>
             <Image 
-              source={{ uri: `${IMAGE_BASE_URL}/images/logo.jpg` }} 
-              style={styles.logo} 
-              resizeMode="contain" 
+              source={{ uri: `${IMAGE_BASE_URL}/images/auth_mascot.png` }} 
+              style={styles.mascotBg} 
+              resizeMode="cover"
             />
-            <Text style={styles.title}>Đăng Nhập</Text>
-            <Text style={styles.subtitle}>Vui lòng đăng nhập để tiếp tục</Text>
+            <LinearGradient
+              colors={['rgba(15, 23, 42, 0.85)', 'rgba(249, 115, 22, 0.4)']}
+              style={styles.benefitCard}
+            >
+              <Text style={styles.benefitTitle}>ĐẶC QUYỀN <Text style={{color: '#fbbf24'}}>DDH-ELITE</Text></Text>
+              <Text style={styles.benefitSubtitle}>Kỷ nguyên công nghệ số</Text>
+              
+              <View style={styles.benefitList}>
+                <View style={styles.benefitItem}>
+                  <Icon name="bolt" size={14} color="#fbbf24" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Giảm trực tiếp 5% cho mọi đơn hàng phụ kiện.</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Icon name="truck" size={14} color="#3b82f6" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Miễn phí vận chuyển toàn quốc đơn từ 299k.</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Icon name="birthday-cake" size={14} color="#ef4444" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Tặng Voucher 500k trong tháng sinh nhật.</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Icon name="shield" size={14} color="#22c55e" style={styles.benefitIcon} />
+                  <Text style={styles.benefitText}>Đặc quyền 1 đổi 1 trong 45 ngày đầu tiên.</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Nhập email của bạn"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+          {/* Login Form Section */}
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>Đăng Nhập</Text>
+            <Text style={styles.formSubtitle}>Chào mừng quay trở lại với kỷ nguyên số DDH</Text>
+
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>EMAIL</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="envelope-o" size={16} color="#666" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="nhapemail@domain.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mật khẩu</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Nhập mật khẩu"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>MẬT KHẨU</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Icon name="lock" size={18} color="#666" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Icon name={showPassword ? "eye-slash" : "eye"} size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity 
@@ -119,32 +179,36 @@ const LoginScreen = ({ navigation }) => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.loginButtonText}>Đăng Nhập</Text>
+                <Text style={styles.loginButtonText}>ĐĂNG NHẬP</Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
               <View style={styles.line} />
-              <Text style={styles.dividerText}>Hoặc đăng nhập với</Text>
+              <Text style={styles.dividerText}>Hoặc đăng nhập bằng</Text>
               <View style={styles.line} />
             </View>
 
             <View style={styles.socialContainer}>
-              <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialPress('google')}>
-                <Icon name="google" size={20} color="#DB4437" />
-                <Text style={styles.socialText}>Google</Text>
+              <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('google')}>
+                <Image 
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png' }} 
+                  style={styles.socialImg} 
+                />
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.socialButton, styles.zaloButton]} onPress={() => handleSocialPress('zalo')}>
-                <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Zalo_logo.svg/1200px-Zalo_logo.svg.png' }} style={styles.zaloIcon} />
-                <Text style={styles.zaloText}>Zalo</Text>
+              <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('zalo')}>
+                <Image 
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Zalo_logo.svg/1200px-Zalo_logo.svg.png' }} 
+                  style={styles.socialImg} 
+                />
               </TouchableOpacity>
             </View>
 
             <View style={styles.registerContainer}>
-              <Text style={styles.registerText}>Chưa có tài khoản? </Text>
+              <Text style={styles.registerText}>Bạn chưa có tài khoản? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.registerLink}>Đăng ký ngay</Text>
+                <Text style={styles.registerLink}>Đăng ký DDH-Elite</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -179,51 +243,117 @@ const LoginScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  scrollContent: { padding: 20, paddingTop: 40 },
-  header: { alignItems: 'center', marginBottom: 40 },
-  logo: { width: 150, height: 80, marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 5 },
-  form: { width: '100%' },
-  inputContainer: { marginBottom: 20 },
-  label: { fontSize: 14, color: '#333', marginBottom: 8, fontWeight: '600' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    backgroundColor: '#f9f9f9',
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    height: 50,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
+  headerLogo: { width: 100, height: 35 },
+  scrollContent: { paddingBottom: 40 },
+  
+  benefitsContainer: {
+    height: 220,
+    margin: 15,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mascotBg: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  benefitCard: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#f97316',
+    borderRadius: 20,
+  },
+  benefitTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  benefitSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginBottom: 15,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  benefitList: { gap: 8 },
+  benefitItem: { flexDirection: 'row', alignItems: 'center' },
+  benefitIcon: { width: 20 },
+  benefitText: { color: '#fff', fontSize: 11, fontWeight: '500' },
+
+  formContainer: { paddingHorizontal: 25, marginTop: 10 },
+  formTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', textAlign: 'center' },
+  formSubtitle: { fontSize: 13, color: '#64748b', textAlign: 'center', marginTop: 5, marginBottom: 30 },
+  
+  inputWrapper: { marginBottom: 20 },
+  label: { fontSize: 11, fontWeight: '800', color: '#64748b', marginBottom: 8, letterSpacing: 0.5 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  inputIcon: { paddingHorizontal: 15 },
+  input: { flex: 1, paddingVertical: 12, fontSize: 14, color: '#1e293b' },
+  eyeIcon: { paddingHorizontal: 15 },
+
   loginButton: {
-    backgroundColor: Colors.primary || '#000',
-    borderRadius: 8,
+    backgroundColor: '#f97316',
+    borderRadius: 50,
     padding: 15,
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: '#f97316',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  loginButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  loginButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold', letterSpacing: 1 },
+  
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 30 },
-  line: { flex: 1, height: 1, backgroundColor: '#eee' },
-  dividerText: { marginHorizontal: 10, color: '#999', fontSize: 12 },
-  socialContainer: { flexDirection: 'row', justifyContent: 'space-between' },
-  socialButton: {
-    flex: 0.48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  line: { flex: 1, height: 1, backgroundColor: '#f1f5f9' },
+  dividerText: { marginHorizontal: 10, color: '#94a3b8', fontSize: 11 },
+  
+  socialContainer: { flexDirection: 'row', justifyContent: 'center', gap: 25 },
+  socialCircle: {
+    width: 55,
+    height: 55,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  socialText: { marginLeft: 10, fontSize: 14, fontWeight: '600', color: '#333' },
-  zaloButton: { backgroundColor: '#0068ff', borderColor: '#0068ff' },
-  zaloIcon: { width: 20, height: 20 },
-  zaloText: { marginLeft: 10, fontSize: 14, fontWeight: '600', color: '#fff' },
+  socialImg: { width: 28, height: 28, resizeMode: 'contain' },
+  
   registerContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
-  registerText: { color: '#666' },
-  registerLink: { color: Colors.secondary || '#ff6b00', fontWeight: 'bold' },
+  registerText: { color: '#64748b', fontSize: 13 },
+  registerLink: { color: '#007bff', fontWeight: 'bold', fontSize: 13 },
+  
   modalHeader: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
     paddingHorizontal: 15, height: 56, borderBottomWidth: 1, borderBottomColor: '#eee' 
