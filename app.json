@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Lap_trinh_mobile_DDH",
-    "slug": "Lap_trinh_mobile_DDH",
+    "name": "DDH Store",
+    "slug": "ddh-store",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,17 +10,18 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2563eb"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ddh.store"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#2563eb"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.ddh.store"
     },
     "web": {
       "favicon": "./assets/favicon.png"
