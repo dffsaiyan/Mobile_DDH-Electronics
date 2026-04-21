@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node set-ip.js && expo start",
-    "android": "node set-ip.js && expo start --android",
-    "ios": "node set-ip.js && expo start --ios",
-    "web": "node set-ip.js && expo start --web"
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

@@ -60,17 +60,51 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleSocialPress = (provider) => {
-    const url = `${IMAGE_BASE_URL}/login/${provider}`;
+    const url = `${IMAGE_BASE_URL}/login/${provider}?mobile=1`;
     setSocialUrl(url);
     setSocialModalVisible(true);
   };
 
   const onNavigationStateChange = async (navState) => {
+    // Check for our new mobile-specific success URL
+    if (navState.url.includes('mobile-social-success')) {
+      setSocialModalVisible(false);
+      setLoading(true);
+
+      try {
+        const url = navState.url;
+        const tokenMatch = url.match(/token=([^&]+)/);
+        const userMatch = url.match(/user=([^&]+)/);
+
+        if (tokenMatch && userMatch) {
+          const token = tokenMatch[1];
+          const userStr = decodeURIComponent(userMatch[1].replace(/\+/g, ' '));
+          const userData = JSON.parse(userStr);
+          
+          await socialLogin(userData, token);
+          navigation.navigate('HomeTabs');
+        } else {
+          setStatus('error');
+          setMessage('Không thể lấy thông tin đăng nhập.');
+        }
+      } catch (error) {
+        console.error('Social Success Parsing Error:', error);
+        setStatus('error');
+        setMessage('Lỗi khi xử lý thông tin đăng nhập.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Legacy fallback (might still be needed if server redirects to root)
     const isSuccess = navState.url === `${IMAGE_BASE_URL}/` || 
                       navState.url === `${IMAGE_BASE_URL}/home` ||
                       navState.url.includes('success');
 
     if (isSuccess && socialModalVisible) {
+      // If we are here, it means the server didn't redirect to mobile-social-success
+      // We try the old way but it likely will fail with 401 if cookies aren't shared
       setSocialModalVisible(false);
       setLoading(true);
       
@@ -82,10 +116,10 @@ const LoginScreen = ({ navigation }) => {
           navigation.navigate('HomeTabs');
         } else {
           setStatus('error');
-          setMessage('Không thể lấy thông tin đăng nhập từ mạng xã hội.');
+          setMessage('Vui lòng thử lại đăng nhập.');
         }
       } catch (error) {
-        console.error('Social Token Error:', error);
+        console.error('Social Token Error (Legacy):', error);
         setStatus('error');
         setMessage('Phiên đăng nhập hết hạn hoặc có lỗi xảy ra.');
       } finally {

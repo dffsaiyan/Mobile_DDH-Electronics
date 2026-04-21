@@ -2,8 +2,11 @@ import * as React from 'react';
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Image,
-  ScrollView, StatusBar, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions
+  ScrollView, StatusBar, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, Modal
 } from 'react-native';
+import { useRef } from 'react';
+import { WebView } from 'react-native-webview';
+import apiClient from '../api/apiClient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
-  const { register } = useAuth();
+  const { register, socialLogin } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +26,18 @@ const RegisterScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error' | null
   const [message, setMessage] = useState('');
+  
+  // Social Login State
+  const [socialModalVisible, setSocialModalVisible] = useState(false);
+  const [socialUrl, setSocialUrl] = useState('');
+  const webViewRef = useRef(null);
+  
+  const handleSocialPress = (provider) => {
+    const url = `${IMAGE_BASE_URL}/login/${provider}?mobile=1`;
+    setSocialUrl(url);
+    setSocialModalVisible(true);
+  };
+
 
   const handleRegister = async () => {
     setStatus(null);
@@ -50,6 +65,66 @@ const RegisterScreen = ({ navigation }) => {
       setStatus('success');
       setMessage('Gia nhập Elite thành công! Đang chuyển hướng...');
       setTimeout(() => navigation.navigate('HomeTabs'), 1000);
+    }
+  };
+
+  const handleSocialNavigationChange = async (navState) => {
+    // Intercept mobile-specific success URL
+    if (navState.url.includes('mobile-social-success')) {
+      setSocialModalVisible(false);
+      setLoading(true);
+
+      try {
+        const url = navState.url;
+        const tokenMatch = url.match(/token=([^&]+)/);
+        const userMatch = url.match(/user=([^&]+)/);
+
+        if (tokenMatch && userMatch) {
+          const token = tokenMatch[1];
+          const userStr = decodeURIComponent(userMatch[1].replace(/\+/g, ' '));
+          const userData = JSON.parse(userStr);
+          
+          await socialLogin(userData, token);
+          navigation.navigate('HomeTabs');
+        } else {
+          setStatus('error');
+          setMessage('Không thể lấy thông tin đăng ký.');
+        }
+      } catch (error) {
+        console.error('Social Registration Parsing Error:', error);
+        setStatus('error');
+        setMessage('Lỗi khi xử lý thông tin đăng ký.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const isSuccess = navState.url === `${IMAGE_BASE_URL}/` || 
+                      navState.url === `${IMAGE_BASE_URL}/home` ||
+                      navState.url.includes('success');
+
+    if (isSuccess && socialModalVisible) {
+      setSocialModalVisible(false);
+      setLoading(true);
+      
+      try {
+        const response = await apiClient.get('/v1/social/token');
+        if (response.data.success) {
+          const { user, token } = response.data;
+          await socialLogin(user, token);
+          navigation.navigate('HomeTabs');
+        } else {
+          setStatus('error');
+          setMessage('Vui lòng thử lại đăng ký.');
+        }
+      } catch (error) {
+        console.error('Social Token Error (Register):', error);
+        setStatus('error');
+        setMessage('Phiên đăng ký hết hạn hoặc có lỗi xảy ra.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -188,6 +263,9 @@ const RegisterScreen = ({ navigation }) => {
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Icon name={showPassword ? "eye-slash" : "eye"} size={16} color="#666" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -206,6 +284,28 @@ const RegisterScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
+            <View style={styles.dividerContainer}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>Hoặc gia nhập bằng</Text>
+              <View style={styles.line} />
+            </View>
+
+            <View style={styles.socialContainer}>
+              <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('google')}>
+                <Image 
+                  source={{ uri: `${IMAGE_BASE_URL}/images/google_icon.png` }} 
+                  style={styles.socialImg} 
+                />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.socialCircle} onPress={() => handleSocialPress('zalo')}>
+                <Image 
+                  source={{ uri: `${IMAGE_BASE_URL}/images/zalo_icon.png` }} 
+                  style={styles.socialImg} 
+                />
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Bạn đã có tài khoản? </Text>
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -216,6 +316,28 @@ const RegisterScreen = ({ navigation }) => {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={socialModalVisible} animationType="slide" onRequestClose={() => setSocialModalVisible(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setSocialModalVisible(false)} style={styles.closeBtn}>
+              <Icon name="close" size={24} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Đăng ký Elite</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <WebView 
+            ref={webViewRef}
+            source={{ uri: socialUrl }}
+            onNavigationStateChange={handleSocialNavigationChange}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            userAgent={Platform.OS === 'ios' ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' : 'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36'}
+            startInLoadingState={true}
+            renderLoading={() => <ActivityIndicator size="large" color="#f97316" style={styles.webViewLoading} />}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -311,7 +433,7 @@ const styles = StyleSheet.create({
   eyeIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
 
   registerButton: {
-    backgroundColor: '#0d6efd', // var(--primary-blue) Bootstrap
+    backgroundColor: '#0f172a', // var(--primary-blue) #0f172a
     borderRadius: 50, // rounded-pill
     paddingVertical: 12,
     alignItems: 'center',
@@ -328,6 +450,36 @@ const styles = StyleSheet.create({
   loginContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   loginText: { color: '#64748b', fontSize: 13 },
   loginLink: { color: '#f97316', fontWeight: 'bold', fontSize: 13 },
+
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
+  line: { flex: 1, height: 1, backgroundColor: '#f1f5f9' },
+  dividerText: { marginHorizontal: 10, color: '#94a3b8', fontSize: 11 },
+  
+  socialContainer: { flexDirection: 'row', justifyContent: 'center', gap: 25 },
+  socialCircle: {
+    width: 55,
+    height: 55,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  socialImg: { width: 28, height: 28, resizeMode: 'contain' },
+  
+  modalHeader: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
+    paddingHorizontal: 15, height: 56, borderBottomWidth: 1, borderBottomColor: '#eee' 
+  },
+  closeBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold' },
+  webViewLoading: { position: 'absolute', top: '50%', left: '50%', marginLeft: -15, marginTop: -15 },
 });
 
 export default RegisterScreen;

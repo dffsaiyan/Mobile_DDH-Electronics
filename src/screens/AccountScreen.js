@@ -7,14 +7,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { height, width } = Dimensions.get('window');
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 import { IMAGE_BASE_URL } from '../api/apiClient';
+
+const { height, width } = Dimensions.get('window');
 
 const AccountScreen = ({ navigation }) => {
   const { user, isLoggedIn, logout, updateProfile } = useAuth();
@@ -98,7 +98,9 @@ const AccountScreen = ({ navigation }) => {
           <View style={styles.sidebarHeader}>
             <View style={styles.avatarContainer}>
               <Image 
-                source={{ uri: user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${IMAGE_BASE_URL}/${user.avatar.replace('public/', '')}`) : `${IMAGE_BASE_URL}/images/avatars/1776311457.jpg` }} 
+                source={{ 
+                  uri: user?.social_avatar || (user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${IMAGE_BASE_URL}/${user.avatar.replace('public/', '')}`) : `${IMAGE_BASE_URL}/images/avatars/1776311457.jpg`)
+                }} 
                 style={styles.avatarImg} 
               />
               <TouchableOpacity style={styles.avatarEditBtn}>
