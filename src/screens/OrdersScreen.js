@@ -8,8 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
-import { FontAwesome5 as Icon } from '@expo/vector-icons';
+import apiClient, { IMAGE_BASE_URL, getUserAvatar } from '../api/apiClient';
+import { FontAwesome5 as Icon, FontAwesome as FaIcon } from '@expo/vector-icons';
 
 const formatPrice = (price) => {
   if (!price || isNaN(price)) return '0 VNĐ';
@@ -90,6 +90,10 @@ const OrdersScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
+
   const TABS = [
     { key: 'all', label: 'Tất cả' },
     { key: 'pending', label: 'Chờ xử lý' },
@@ -101,6 +105,7 @@ const OrdersScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchOrders();
+    setCurrentPage(1); // Reset to page 1 on tab change
   }, [activeTab]);
 
   const fetchOrders = async () => {
@@ -132,18 +137,51 @@ const OrdersScreen = ({ navigation }) => {
     });
   };
 
+  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    return (
+      <View style={styles.paginationRow}>
+        <TouchableOpacity 
+          style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]} 
+          onPress={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={currentPage === 1}
+        >
+          <Icon name="chevron-left" size={12} color={currentPage === 1 ? '#cbd5e1' : '#1e293b'} />
+        </TouchableOpacity>
+        
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <TouchableOpacity 
+            key={i} 
+            style={[styles.pageNumber, currentPage === i + 1 && styles.pageNumberActive]}
+            onPress={() => setCurrentPage(i + 1)}
+          >
+            <Text style={[styles.pageText, currentPage === i + 1 && styles.pageTextActive]}>{i + 1}</Text>
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity 
+          style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]} 
+          onPress={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+          disabled={currentPage === totalPages}
+        >
+          <Icon name="chevron-right" size={12} color={currentPage === totalPages ? '#cbd5e1' : '#1e293b'} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const renderHeader = () => (
     <View>
       {/* 👤 SIDEBAR-LIKE USER INFO */}
       <View style={styles.sidebarHeader}>
         <View style={styles.avatarContainer}>
           <Image 
-            source={{ uri: user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${IMAGE_BASE_URL}/${user.avatar.replace('public/', '')}`) : `${IMAGE_BASE_URL}/images/avatars/1776311457.jpg` }} 
+            source={{ uri: getUserAvatar(user) }} 
             style={styles.avatarImg} 
           />
-          <TouchableOpacity style={styles.avatarEditBtn}>
-            <Icon name="camera" size={10} color="#fff" />
-          </TouchableOpacity>
         </View>
         <Text style={styles.userName}>{user?.name || 'Admin DDH'}</Text>
         <Text style={styles.userRole}>Thành viên Elite</Text>
@@ -151,11 +189,11 @@ const OrdersScreen = ({ navigation }) => {
 
       {/* 📋 MENU GRID */}
       <View style={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('ProfileEdit')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('ProfileEdit')}>
           <Icon name="user-circle" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Hồ sơ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Wishlist')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('Wishlist')}>
           <Icon name="heart" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Yêu thích</Text>
         </TouchableOpacity>
@@ -201,8 +239,8 @@ const OrdersScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
       <View style={styles.fixedHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconBtn}>
-          <Icon name="chevron-left" size={20} color="#1e293b" />
+        <TouchableOpacity onPress={() => navigation.navigate('HomeTabs', { screen: 'Account' })} style={styles.backIconBtn}>
+          <Icon name="arrow-left" size={20} color="#1e293b" />
         </TouchableOpacity>
         <Text style={styles.fixedHeaderTitle}>Lịch sử mua hàng</Text>
         <View style={{ width: 40 }} />
@@ -214,8 +252,9 @@ const OrdersScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={orders}
+          data={paginatedOrders}
           ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderPagination}
           renderItem={({ item }) => (
             <OrderCard order={item} onPress={(o) => navigation.navigate('OrderDetail', { order: o })} />
           )}
@@ -305,6 +344,15 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 25, lineHeight: 20 },
   shopBtn: { backgroundColor: '#0f172a', paddingHorizontal: 30, paddingVertical: 14, borderRadius: 50 },
   shopBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+
+  // Pagination Styles
+  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 30, gap: 10 },
+  pageBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageNumber: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  pageNumberActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
+  pageText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
+  pageTextActive: { color: '#fff' },
 });
 
 export default OrdersScreen;

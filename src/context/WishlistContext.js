@@ -15,21 +15,25 @@ export const WishlistProvider = ({ children }) => {
   const isLoggedIn = auth ? auth.isLoggedIn : false;
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && auth?.token) {
       fetchWishlistFromApi();
-    } else {
+    } else if (!isLoggedIn) {
       loadWishlistFromStorage();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, auth?.token]);
 
   const fetchWishlistFromApi = async () => {
     try {
       const response = await apiClient.get('/v1/wishlist');
       if (response.data.success) {
-        setWishlistItems(response.data.data);
+        // Handle different API response structures (array or object with data property)
+        const items = Array.isArray(response.data.data) ? response.data.data : (response.data.data?.data || []);
+        setWishlistItems(items);
       }
     } catch (error) {
-      console.error('Error fetching wishlist from API:', error.response?.status || error.message);
+      if (error.response?.status !== 401) {
+        console.error('Error fetching wishlist from API:', error.response?.status || error.message);
+      }
     }
   };
 
@@ -92,10 +96,32 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
+  const clearWishlist = async () => {
+    const itemsToClear = [...wishlistItems];
+    setWishlistItems([]);
+    
+    if (!isLoggedIn) {
+      await saveWishlistToStorage([]);
+    } else {
+      // Vì API không có endpoint /clear (404), ta sẽ lặp qua từng item để xóa
+      try {
+        for (const item of itemsToClear) {
+          await apiClient.post(`/v1/wishlist/toggle/${item.id}`);
+        }
+      } catch (error) {
+        console.error('Error clearing wishlist items one by one:', error);
+      }
+    }
+  };
+
   return (
     <WishlistContext.Provider value={{
       wishlistItems,
-      toggleWishlist, isInWishlist, removeFromWishlist,
+      toggleWishlist, 
+      isInWishlist, 
+      removeFromWishlist,
+      clearWishlist,
+      refreshWishlist: fetchWishlistFromApi,
       wishlistCount: wishlistItems.length,
     }}>
       {children}

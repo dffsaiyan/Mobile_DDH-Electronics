@@ -10,7 +10,8 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { IMAGE_BASE_URL } from '../api/apiClient';
+import { useFocusEffect } from '@react-navigation/native';
+import { IMAGE_BASE_URL, getUserAvatar } from '../api/apiClient';
 import { FontAwesome5 as Icon, FontAwesome as FaIcon } from '@expo/vector-icons';
 
 const getImageUrl = (path) => {
@@ -27,10 +28,21 @@ const formatPrice = (price) => {
 };
 
 const WishlistScreen = ({ navigation }) => {
-  const { wishlistItems, removeFromWishlist } = useWishlist();
+  const { wishlistItems, removeFromWishlist, clearWishlist, refreshWishlist } = useWishlist();
+  
+  // 🔄 REFRESH FROM API WHEN FOCUSED (SYNC WITH WEB)
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshWishlist();
+    }, [])
+  );
   const { addToCart } = useCart();
   const { user, logout } = useAuth();
   const { showToast, showConfirm } = useNotification();
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
 
   const handleAddToCart = (item) => {
     addToCart({ ...item, sale_price: Number(item.sale_price) > 0 ? item.sale_price : item.price });
@@ -48,18 +60,62 @@ const WishlistScreen = ({ navigation }) => {
     });
   };
 
+  const handleClearAll = () => {
+    if (wishlistItems.length === 0) return;
+    showConfirm({
+      title: 'Xóa toàn bộ?',
+      message: 'Bạn có chắc chắn muốn làm trống danh sách yêu thích của mình không?',
+      confirmText: 'Xóa tất cả',
+      type: 'danger',
+      onConfirm: clearWishlist
+    });
+  };
+
+  const totalPages = Math.ceil(wishlistItems.length / ITEMS_PER_PAGE);
+  const paginatedWishlist = wishlistItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    return (
+      <View style={styles.paginationRow}>
+        <TouchableOpacity 
+          style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]} 
+          onPress={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={currentPage === 1}
+        >
+          <Icon name="chevron-left" size={12} color={currentPage === 1 ? '#cbd5e1' : '#1e293b'} />
+        </TouchableOpacity>
+        
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <TouchableOpacity 
+            key={i} 
+            style={[styles.pageNumber, currentPage === i + 1 && styles.pageNumberActive]}
+            onPress={() => setCurrentPage(i + 1)}
+          >
+            <Text style={[styles.pageText, currentPage === i + 1 && styles.pageTextActive]}>{i + 1}</Text>
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity 
+          style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]} 
+          onPress={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+          disabled={currentPage === totalPages}
+        >
+          <Icon name="chevron-right" size={12} color={currentPage === totalPages ? '#cbd5e1' : '#1e293b'} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const renderHeader = () => (
     <View>
       {/* 👤 SIDEBAR-LIKE USER INFO */}
       <View style={styles.sidebarHeader}>
         <View style={styles.avatarContainer}>
           <Image 
-            source={{ uri: user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${IMAGE_BASE_URL}/${user.avatar.replace('public/', '')}`) : `${IMAGE_BASE_URL}/images/avatars/1776311457.jpg` }} 
+            source={{ uri: getUserAvatar(user) }} 
             style={styles.avatarImg} 
           />
-          <TouchableOpacity style={styles.avatarEditBtn}>
-            <Icon name="camera" size={12} color="#fff" />
-          </TouchableOpacity>
         </View>
         <Text style={styles.userName}>{user?.name || 'Admin DDH'}</Text>
         <Text style={styles.userRole}>Thành viên Elite</Text>
@@ -67,7 +123,7 @@ const WishlistScreen = ({ navigation }) => {
 
       {/* 📋 MENU GRID (HORIZONTAL) */}
       <View style={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('ProfileEdit')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('ProfileEdit')}>
           <Icon name="user-circle" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Hồ sơ</Text>
         </TouchableOpacity>
@@ -75,7 +131,7 @@ const WishlistScreen = ({ navigation }) => {
           <Icon name="heart" size={16} color="#fff" />
           <Text style={[styles.menuLabel, {color: '#fff'}]}>Yêu thích</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Orders')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('Orders')}>
           <Icon name="shopping-bag" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Đơn hàng</Text>
         </TouchableOpacity>
@@ -93,8 +149,16 @@ const WishlistScreen = ({ navigation }) => {
 
       {/* 🏷️ WISHLIST TITLE WITH ORANGE BAR */}
       <View style={styles.wishlistTitleRow}>
-        <View style={styles.orangeBar} />
-        <Text style={styles.wishlistTitleText}>Danh sách yêu thích ({wishlistItems.length})</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <View style={styles.orangeBar} />
+          <Text style={styles.wishlistTitleText}>Danh sách yêu thích ({wishlistItems.length})</Text>
+        </View>
+        {wishlistItems.length > 0 && (
+          <TouchableOpacity style={styles.clearAllBtn} onPress={handleClearAll}>
+            <Icon name="trash" size={12} color="#ef4444" />
+            <Text style={styles.clearAllText}>Xóa tất cả</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -133,16 +197,17 @@ const WishlistScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
       <View style={styles.fixedHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconBtn}>
-          <Icon name="chevron-left" size={20} color="#1e293b" />
+        <TouchableOpacity onPress={() => navigation.navigate('HomeTabs', { screen: 'Account' })} style={styles.backIconBtn}>
+          <Icon name="arrow-left" size={20} color="#1e293b" />
         </TouchableOpacity>
         <Text style={styles.fixedHeaderTitle}>Danh sách yêu thích</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <FlatList
-        data={wishlistItems.length > 0 ? wishlistItems : []}
+        data={paginatedWishlist}
         ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderPagination}
         ListEmptyComponent={renderEmptyState}
         keyExtractor={item => item.id.toString()}
         showsVerticalScrollIndicator={false}
@@ -207,13 +272,14 @@ const styles = StyleSheet.create({
   menuItemActive: { backgroundColor: '#f97316' },
   menuLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', marginTop: 6 },
 
-  // Title with Orange Bar
-  wishlistTitleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 25, marginTop: 25, marginBottom: 15 },
+  wishlistTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 25, marginTop: 25, marginBottom: 15 },
   orangeBar: { width: 6, height: 22, backgroundColor: '#f97316', borderRadius: 3, marginRight: 12 },
   wishlistTitleText: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
+  clearAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8, backgroundColor: '#fef2f2', borderRadius: 8 },
+  clearAllText: { fontSize: 11, fontWeight: 'bold', color: '#ef4444' },
 
   // Cards
-  card: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 20, padding: 12, marginBottom: 15, borderWidth: 1, borderColor: '#f1f5f9', ...Shadow.tiny },
+  card: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 20, padding: 12, marginBottom: 15, borderWidth: 1, borderColor: '#f1f5f9', ...Shadow.small },
   imageBox: { width: 90, height: 90, borderRadius: 16, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   cardImage: { width: '80%', height: '80%' },
   cardInfo: { flex: 1, justifyContent: 'center' },
@@ -238,6 +304,15 @@ const styles = StyleSheet.create({
   shopBtnContent: { flexDirection: 'row', alignItems: 'center', paddingLeft: 30, paddingRight: 10, paddingVertical: 10 },
   shopBtnText: { fontSize: 13, fontWeight: '900', color: Colors.white, letterSpacing: 1, marginRight: 15 },
   shopBtnIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+
+  // Pagination Styles
+  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 30, gap: 10 },
+  pageBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageNumber: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  pageNumberActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
+  pageText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
+  pageTextActive: { color: '#fff' },
 });
 
 export default WishlistScreen;

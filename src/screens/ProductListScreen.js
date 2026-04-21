@@ -17,8 +17,11 @@ import {
   UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, Typography } from '../styles/Theme';
+import { Colors, Spacing } from '../styles/Theme';
 import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
+import { useNavigation } from '@react-navigation/native';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
@@ -64,24 +67,32 @@ const formatPrice = (price) => {
 };
 
 // 🃏 PRODUCT CARD COMPONENT
-const ProductCard = ({ item, onPress }) => {
+const ProductCard = ({ item }) => {
+  const navigation = useNavigation();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { addToCart } = useCart();
+  const { showToast } = useNotification();
+  
   const hasDiscount = item.is_flash_sale && item.sale_price > 0 && item.sale_price < item.price;
-  const discountPercent = hasDiscount
-    ? Math.round(((item.price - item.sale_price) / item.price) * 100)
-    : 0;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(item)} activeOpacity={0.8}>
-      <View style={styles.imageContainer}>
+    <View style={styles.card}>
+      <TouchableOpacity 
+        style={styles.imageContainer} 
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+      >
         <Image source={{ uri: getImageUrl(item.image) }} style={styles.productImage} resizeMode="contain" />
         <TouchableOpacity 
           style={[styles.cardWishBtn, isInWishlist(item.id) && {backgroundColor: Colors.secondarySoft}]} 
-          onPress={() => toggleWishlist(item)}
+          onPress={() => {
+            toggleWishlist(item);
+            showToast(isInWishlist(item.id) ? 'Đã xóa khỏi danh sách yêu thích' : 'Đã thêm vào danh sách yêu thích', 'info');
+          }}
         >
           <Icon name="heart" size={14} color={isInWishlist(item.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(item.id)} />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.infoContainer}>
         <Text style={styles.categoryLabel}>{item.category?.name || 'ELITE'}</Text>
@@ -93,8 +104,28 @@ const ProductCard = ({ item, onPress }) => {
             <Text style={styles.originalPrice}>{formatPrice(item.price)}</Text>
           )}
         </View>
+
+        {/* Action Buttons */}
+        <View style={styles.cardActions}>
+          <View style={styles.cardActionRow}>
+            <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
+              <Icon name="eye" size={10} color={Colors.primary} />
+              <Text style={styles.btnSecondaryText}>Chi tiết</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.btnSecondary} onPress={() => { addToCart(item); showToast('Đã thêm vào giỏ hàng!', 'success'); }}>
+              <Icon name="cart-plus" size={10} color={Colors.primary} />
+              <Text style={styles.btnSecondaryText}>+ Giỏ</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+            style={[styles.btnBuy, { backgroundColor: item.is_flash_sale ? Colors.secondary : Colors.primary }]} 
+            onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
+          >
+            <Text style={styles.btnBuyText}>Mua Ngay</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -352,7 +383,7 @@ const styles = StyleSheet.create({
   discountBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: Colors.secondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 10 },
   discountBadgeText: { fontSize: 9, fontWeight: '900', color: Colors.white },
   
-  infoContainer: { padding: 14 },
+  infoContainer: { padding: 14, minHeight: 165 },
   categoryLabel: { fontSize: 8, fontWeight: '800', color: Colors.secondary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
   productName: { fontSize: 12, fontWeight: '700', color: Colors.primary, lineHeight: 16, marginBottom: 6, minHeight: 32 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8, flexWrap: 'wrap' },
@@ -376,6 +407,14 @@ const styles = StyleSheet.create({
   pageText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   pageTextActive: { color: Colors.white },
   navBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
+
+  // Action Buttons
+  cardActions: { marginTop: 4, gap: 8 },
+  cardActionRow: { flexDirection: 'row', gap: 6 },
+  btnSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
+  btnSecondaryText: { fontSize: 9, fontWeight: '800', color: Colors.primary },
+  btnBuy: { backgroundColor: Colors.secondary, paddingVertical: 10, borderRadius: 12, alignItems: 'center', shadowColor: Colors.secondary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 },
+  btnBuyText: { color: Colors.white, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
 });
 
 export default ProductListScreen;

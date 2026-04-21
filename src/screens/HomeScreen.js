@@ -8,10 +8,12 @@ import {
   TouchableWithoutFeedback, Keyboard, Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing } from '../styles/Theme';
+import { Colors, Spacing, Shadow } from '../styles/Theme';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
+import { useNotification } from '../context/NotificationContext';
 
 const { width, height } = Dimensions.get('window');
 const CARD_W = (width - Spacing.m * 3) / 2;
@@ -68,7 +70,26 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState({ slides: [], categories: [], flash_sale: [], popular: [], banners: [] });
-  const { wishlistItems, toggleWishlist, isInWishlist } = useWishlist();
+  const { wishlistItems, toggleWishlist, isInWishlist, refreshWishlist } = useWishlist();
+  const { addToCart } = useCart();
+  const { showToast } = useNotification();
+
+  // 🔄 REFRESH WISHLIST ON FOCUS (SYNC WITH WEB)
+  useFocusEffect(
+    useCallback(() => {
+      refreshWishlist();
+    }, [refreshWishlist])
+  );
+
+  const handleToggleWishlist = (item) => {
+    toggleWishlist(item);
+    showToast(isInWishlist(item.id) ? 'Đã xóa khỏi danh sách yêu thích' : 'Đã thêm vào danh sách yêu thích', 'info');
+  };
+
+  const handleAddToCart = (item) => {
+    addToCart(item);
+    showToast('Đã thêm vào giỏ hàng!', 'success');
+  };
   const wishlistCount = wishlistItems?.length || 0;
   const [countdown, setCountdown] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const sliderRef = useRef(null);
@@ -84,36 +105,90 @@ const HomeScreen = ({ navigation }) => {
 
   // 🏆 HARDCODED CATEGORIES (WEB SYNC)
   const eliteCategories = [
-    { id: 'cat-1', name: 'Bàn phím cơ', icon: 'images/icon/vecteezy_ergonomic-mechanical-keyboard-with-custom-keycaps-for_60514914.png' },
-    { id: 'cat-2', name: 'Chuột Gaming', icon: 'images/icon/gaming-mouse-3d-icon-png-download-9675855.webp' },
-    { id: 'cat-3', name: 'Màn hình đồ họa', icon: 'images/icon/premium-computer-parts-display-monitor-icon-3d-rendering-isolated-background_150525-4565.png' },
-    { id: 'cat-4', name: 'Laptop Gaming', icon: 'images/icon/laptop-gaming-3d-icon-png-download-11431625.webp' },
-    { id: 'cat-5', name: 'Âm thanh & Loa', icon: 'images/icon/audio-icon-concept-with-3d-cartoon-style-headphone-and-blue-speaker-3d-illustration-png.png' },
     { id: 'cat-6', name: 'Lót chuột Gear', icon: 'images/icon/ai-gaming-mouse-pad-3d-icon-png-download-jpg-13387054.webp' },
     { id: 'cat-7', name: 'Keycaps & Switch', icon: 'images/icon/keycap-p-3d-icon-png-download-13964981.png' },
     { id: 'cat-8', name: 'Ghế công thái học', icon: 'images/icon/gaming-chair-3d-illustration-office-equipment-icon-png.png' },
   ];
 
+  // ⚡ Flash Pulse Animation
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.2, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [pulseAnim]);
+
   useFocusEffect(useCallback(() => { fetchHomeData(); }, []));
 
   useEffect(() => {
-    if (data?.flash_sale_end) {
-      const timer = setInterval(() => {
-        const distance = new Date(data.flash_sale_end.replace(' ', 'T')).getTime() - new Date().getTime();
-        if (distance < 0) {
-          clearInterval(timer);
+    // 🕒 Aggressive search for flash sale end time in the data object
+    const findEndTime = (obj) => {
+      if (!obj) return null;
+      if (obj.flash_sale_end) return obj.flash_sale_end;
+      if (obj.flashSaleEnd) return obj.flashSaleEnd;
+      if (obj.end_time) return obj.end_time;
+      if (Array.isArray(obj.flash_sale) && obj.flash_sale[0]?.flash_sale_end) return obj.flash_sale[0].flash_sale_end;
+      return null;
+    };
+
+    const flashSaleEnd = findEndTime(data);
+    
+    if (flashSaleEnd) {
+      const updateTimer = () => {
+        let dateStr = String(flashSaleEnd).replace(/\//g, '-').replace('T', ' ').trim();
+        
+        try {
+          let year, month, day, hour = 0, min = 0, sec = 0;
+          const dateTimeParts = dateStr.split(' ');
+          const dateParts = dateTimeParts[0].split('-');
+          
+          if (dateParts[0].length === 4) { // YYYY-MM-DD
+            year = parseInt(dateParts[0]);
+            month = parseInt(dateParts[1]) - 1;
+            day = parseInt(dateParts[2]);
+          } else { // DD-MM-YYYY
+            year = parseInt(dateParts[2]);
+            month = parseInt(dateParts[1]) - 1;
+            day = parseInt(dateParts[0]);
+          }
+
+          if (dateTimeParts[1]) {
+            const timeParts = dateTimeParts[1].split(':');
+            hour = parseInt(timeParts[0]);
+            min = parseInt(timeParts[1]);
+            sec = parseInt(timeParts[2] || 0);
+          }
+
+          const endTime = new Date(year, month, day, hour, min, sec).getTime();
+          const now = new Date().getTime();
+          const distance = endTime - now;
+          
+          if (distance > 0) {
+            const h = Math.floor(distance / 3600000);
+            const m = Math.floor((distance % 3600000) / 60000);
+            const s = Math.floor((distance % 60000) / 1000);
+            setCountdown({
+              hours: h.toString().padStart(2, '0'),
+              minutes: m.toString().padStart(2, '0'),
+              seconds: s.toString().padStart(2, '0')
+            });
+          } else {
+            setCountdown({ hours: '00', minutes: '00', seconds: '00' });
+          }
+        } catch (e) {
+          console.error('Date Parse Error:', e);
           setCountdown({ hours: '00', minutes: '00', seconds: '00' });
-        } else {
-          setCountdown({
-            hours: Math.floor(distance / 3600000).toString().padStart(2, '0'),
-            minutes: Math.floor((distance % 3600000) / 60000).toString().padStart(2, '0'),
-            seconds: Math.floor((distance % 60000) / 1000).toString().padStart(2, '0')
-          });
         }
-      }, 1000);
+      };
+
+      updateTimer(); // Initial call
+      const timer = setInterval(updateTimer, 1000);
       return () => clearInterval(timer);
     }
-  }, [data?.flash_sale_end]);
+  }, [data]);
 
   // 🎡 AUTOPLAY SLIDER LOGIC
   useEffect(() => {
@@ -161,7 +236,38 @@ const HomeScreen = ({ navigation }) => {
       const response = await apiClient.get('/v1/home');
       if (response.data.success) {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setData(response.data.data);
+        let homeData = response.data.data;
+        
+        // 🕒 Aggressive Search for End Time in the WHOLE response
+        const findInObj = (obj) => {
+          if (!obj || typeof obj !== 'object') return null;
+          if (obj.flash_sale_end) return obj.flash_sale_end;
+          if (obj.flashSaleEnd) return obj.flashSaleEnd;
+          if (obj.end_time) return obj.end_time;
+          // Recursively check if it's an object or array
+          for (let key in obj) {
+            if (typeof obj[key] === 'object') {
+              const found = findInObj(obj[key]);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const detectedEndTime = findInObj(response.data);
+        if (detectedEndTime) homeData.flash_sale_end = detectedEndTime;
+
+        // 🛠️ SMART FALLBACK: If flash_sale is empty, try to find flash products in 'popular'
+        const flashItems = homeData.flash_sale || homeData.flashSale || [];
+        if (flashItems.length === 0 && homeData.popular) {
+          const extractedFlash = homeData.popular.filter(p => p.is_flash_sale);
+          if (extractedFlash.length > 0) {
+            homeData.flash_sale = extractedFlash;
+            homeData.popular = homeData.popular.filter(p => !p.is_flash_sale);
+          }
+        }
+        
+        setData(homeData);
       }
     } catch (error) { console.error('Fetch Error:', error); }
     finally { setLoading(false); setRefreshing(false); }
@@ -314,39 +420,117 @@ const HomeScreen = ({ navigation }) => {
             </View>
           )}
         </View>
+        
 
         {/* ── FLASH SALE ── */}
-        {data?.flash_sale?.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.flashTitleRow}>
-                <Text style={styles.flashTitle}>FLASH SALE</Text>
-                <View style={styles.timerContainer}>
-                  <View style={styles.timerBox}><Text style={styles.timerText}>{countdown.hours}</Text></View>
-                  <Text style={styles.timerSeparator}>:</Text>
-                  <View style={styles.timerBox}><Text style={styles.timerText}>{countdown.minutes}</Text></View>
-                  <Text style={styles.timerSeparator}>:</Text>
-                  <View style={[styles.timerBox, { backgroundColor: Colors.danger }]}><Text style={styles.timerText}>{countdown.seconds}</Text></View>
+        {(data?.flash_sale?.length > 0 || data?.flashSale?.length > 0) && (
+          <View style={styles.flashSaleContainerElite}>
+            {/* Decorative Gifts */}
+            <Icon name="gift" size={16} color="#ef4444" style={[styles.giftDeco, { left: 20 }]} />
+            <Icon name="gift" size={16} color="#ef4444" style={[styles.giftDeco, { right: 20 }]} />
+
+            <View style={styles.flashHeaderElite}>
+              <View style={styles.flashHeaderLeft}>
+                <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <Image 
+                    source={{ uri: 'https://ddh-electronics.powercapital-hk.space/images/icon/pngtree-3d-lightning-icon-flash-sale-listrik-petir-png-image_17854619.webp' }} 
+                    style={styles.flashHeaderIcon}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
+                <View>
+                  <Text style={styles.flashHeaderText}>FLASH SALE</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('ProductList', { flash_sale: 1 })}>
+                    <Text style={styles.seeAllFlash}>Xem tất cả →</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.flashHeaderRight}>
+                <Text style={styles.endsInText}>KẾT THÚC SAU:</Text>
+                <View style={styles.countdownRow}>
+                  <View style={styles.timerBoxElite}><Text style={styles.timerTextElite}>{countdown.hours}</Text></View>
+                  <Text style={styles.timerSepElite}>:</Text>
+                  <View style={styles.timerBoxElite}><Text style={styles.timerTextElite}>{countdown.minutes}</Text></View>
+                  <Text style={styles.timerSepElite}>:</Text>
+                  <View style={[styles.timerBoxElite, styles.timerBoxSec]}>
+                    <Text style={styles.timerTextElite}>{countdown.seconds}</Text>
+                  </View>
                 </View>
               </View>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-              {data.flash_sale.map(item => (
-                <TouchableOpacity key={item.id} style={styles.flashCard} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
-                  <View style={styles.flashImageBox}>
-                    <Image source={{ uri: getImageUrl(item.image) }} style={styles.flashImage} resizeMode="contain" />
-                    {item.is_flash_sale && Number(item.sale_price) > 0 && (
-                      <View style={styles.flashTag}>
-                        <Text style={styles.flashTagText}>-{Math.round(((Number(item.price) - Number(item.sale_price)) / Number(item.price)) * 100)}%</Text>
+
+            <View style={styles.flashContentElite}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.flashHScroll}>
+                {(data?.flash_sale || data?.flashSale).map(item => {
+                  const soldCount = item.sold_count || 6;
+                  const totalCount = (item.stock || 41);
+                  const progress = (soldCount / totalCount) * 100;
+                  
+                  return (
+                    <TouchableOpacity key={item.id} style={styles.flashCardElite} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
+                      <View style={styles.badgeFlashElite}>
+                        <Icon name="bolt" size={8} color="#fff" />
+                        <Text style={styles.badgeFlashText}>FLASH SALE</Text>
                       </View>
-                    )}
-                  </View>
-                  <Text style={styles.flashName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.flashSalePrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
-                  <Text style={styles.flashOldPrice}>{item.is_flash_sale && Number(item.sale_price) > 0 ? formatPrice(item.price) : ''}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+
+                      <View style={styles.flashImageBoxElite}>
+                        <Image source={{ uri: getImageUrl(item.image) }} style={styles.flashImageElite} resizeMode="contain" />
+                      </View>
+
+                      <View style={styles.flashBodyElite}>
+                        <Text style={styles.flashLimitText}>Limited Edition</Text>
+                        <Text style={styles.flashNameElite} numberOfLines={1}>{item.name}</Text>
+                        
+                        <View style={styles.flashPriceRowElite}>
+                          <Text 
+                            style={styles.flashSalePriceElite} 
+                            numberOfLines={1} 
+                            adjustsFontSizeToFit
+                          >
+                            {formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}
+                          </Text>
+                          {item.is_flash_sale && Number(item.sale_price) > 0 && (
+                            <Text style={styles.flashOldPriceElite} numberOfLines={1}>{formatPrice(item.price)}</Text>
+                          )}
+                        </View>
+
+                        {/* Stock Progress */}
+                        <View style={styles.stockInfoElite}>
+                          <View style={styles.stockTextRow}>
+                            <Text style={styles.stockLabel}>Đã bán: <Text style={{fontWeight: '900'}}>{soldCount}</Text></Text>
+                            <Text style={styles.stockLabel}>Còn: <Text style={{fontWeight: '900'}}>{totalCount - soldCount}</Text></Text>
+                          </View>
+                          <View style={styles.stockBarContainer}>
+                            <View style={[styles.stockBarFill, { width: `${progress}%` }]} />
+                          </View>
+                        </View>
+
+                        <View style={styles.cardActionsElite}>
+                          <View style={styles.actionRowElite}>
+                            <TouchableOpacity style={styles.btnSecondaryElite} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
+                              <Icon name="eye" size={12} color="#475569" />
+                              <Text style={styles.btnSecTextElite}>Chi tiết</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.btnSecondaryElite} onPress={() => handleAddToCart(item)}>
+                              <Icon name="cart-plus" size={12} color="#475569" />
+                              <Text style={styles.btnSecTextElite}>+ Giỏ</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.btnFlashBuy} 
+                            onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
+                          >
+                            <Icon name="bolt" size={12} color="#fff" />
+                            <Text style={styles.btnBuyTextElite}>Mua Ngay</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
           </View>
         )}
 
@@ -357,11 +541,43 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity onPress={() => navigation.navigate('ProductList')}><Text style={styles.seeAll}>Tất cả →</Text></TouchableOpacity>
           </View>
           <View style={styles.popularGrid}>
-            {data?.popular?.slice(0, 8).map(item => (
+            {data?.popular?.slice(0, 6).map(item => (
               <TouchableOpacity key={item.id} style={styles.popularCard} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
                 <View style={styles.popImageBox}><Image source={{ uri: getImageUrl(item.image) }} style={styles.popularImage} resizeMode="contain" /></View>
                 <Text style={styles.popularName} numberOfLines={2}>{item.name}</Text>
-                <View style={styles.popPriceRow}><Text style={styles.popularPrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text><TouchableOpacity onPress={() => toggleWishlist(item)}><Icon name="heart" size={14} color={isInWishlist(item.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(item.id)} /></TouchableOpacity></View>
+                <View style={styles.popPriceContainer}>
+                  <View style={styles.popPriceRow}>
+                    <Text style={styles.popularPrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
+                    <TouchableOpacity onPress={() => handleToggleWishlist(item)}>
+                      <Icon name="heart" size={14} color={isInWishlist(item.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(item.id)} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.popOldPriceBox}>
+                    {item.is_flash_sale && Number(item.sale_price) > 0 && (
+                      <Text style={styles.popularOldPrice}>{formatPrice(item.price)}</Text>
+                    )}
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={[styles.cardActions, { marginTop: 10 }]}>
+                  <View style={styles.cardActionRow}>
+                    <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
+                      <Icon name="eye" size={10} color={Colors.primary} />
+                      <Text style={styles.btnSecondaryText}>Chi tiết</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.btnSecondary} onPress={() => handleAddToCart(item)}>
+                      <Icon name="cart-plus" size={10} color={Colors.primary} />
+                      <Text style={styles.btnSecondaryText}>+ Giỏ</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.btnBuy, { backgroundColor: item.is_flash_sale ? Colors.secondary : Colors.primary }]} 
+                    onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
+                  >
+                    <Text style={styles.btnBuyText}>Mua Ngay</Text>
+                  </TouchableOpacity>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -425,28 +641,67 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '900', color: Colors.primary },
   sectionSubtitle: { fontSize: 11, color: Colors.secondary, fontWeight: '700' },
   seeAll: { fontSize: 12, fontWeight: '700', color: Colors.secondary },
-  flashTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  flashTitle: { fontSize: 18, fontWeight: '900', color: Colors.danger },
-  timerContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  timerBox: { backgroundColor: '#1e293b', minWidth: 26, height: 26, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  timerText: { color: Colors.white, fontSize: 11, fontWeight: '800' },
-  timerSeparator: { fontSize: 12, fontWeight: '900', color: Colors.primary },
-  hScroll: { gap: 14 },
-  flashCard: { width: 170, backgroundColor: Colors.white, borderRadius: 24, padding: 12, borderWidth: 1, borderColor: '#f1f5f9' },
-  flashImageBox: { width: '100%', height: 120, borderRadius: 16, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  flashImage: { width: '80%', height: '80%' },
-  flashTag: { position: 'absolute', top: 8, right: 8, backgroundColor: Colors.secondary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  flashTagText: { fontSize: 10, fontWeight: '900', color: Colors.white },
-  flashName: { fontSize: 13, fontWeight: '700', color: Colors.primary, marginBottom: 4 },
-  flashSalePrice: { fontSize: 16, fontWeight: '900', color: Colors.secondary },
-  flashOldPrice: { fontSize: 11, color: Colors.muted, textDecorationLine: 'line-through' },
+  // ⚡ ELITE FLASH SALE STYLES
+  flashSaleContainerElite: { backgroundColor: Colors.white, borderRadius: 24, marginHorizontal: Spacing.m, marginBottom: Spacing.xl, ...Shadow.medium, overflow: 'hidden', borderWidth: 1, borderColor: '#fee2e2' },
+  giftDeco: { position: 'absolute', top: 15, opacity: 0.1 },
+  flashHeaderElite: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#fee2e2' },
+  flashHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  flashHeaderIcon: { width: 36, height: 36 },
+  flashHeaderText: { fontSize: 22, fontWeight: '900', color: '#ef4444', letterSpacing: -0.5 },
+  seeAllFlash: { fontSize: 10, fontWeight: '700', color: Colors.secondary, marginTop: -2 },
+  flashHeaderRight: { alignItems: 'flex-end' },
+  endsInText: { fontSize: 8, fontWeight: '800', color: Colors.muted, marginBottom: 4 },
+  countdownRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  timerBoxElite: { backgroundColor: '#1e293b', width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  timerBoxSec: { backgroundColor: '#ef4444', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  timerTextElite: { color: Colors.white, fontSize: 13, fontWeight: '900' },
+  timerSepElite: { fontSize: 14, fontWeight: '900', color: '#1e293b' },
+  
+  flashContentElite: { padding: 12 },
+  flashHScroll: { gap: 12 },
+  flashCardElite: { width: 180, backgroundColor: Colors.white, borderRadius: 20, padding: 10, borderWidth: 1, borderColor: '#f1f5f9' },
+  badgeFlashElite: { position: 'absolute', top: 10, left: 10, backgroundColor: '#ef4444', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, zIndex: 10 },
+  badgeFlashText: { color: Colors.white, fontSize: 8, fontWeight: '900' },
+  flashImageBoxElite: { width: '100%', height: 140, backgroundColor: '#f8fafc', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  flashImageElite: { width: '80%', height: '80%' },
+  flashBodyElite: { flex: 1 },
+  flashLimitText: { fontSize: 9, fontWeight: '800', color: Colors.muted, textTransform: 'uppercase', marginBottom: 2, opacity: 0.7 },
+  flashNameElite: { fontSize: 13, fontWeight: '700', color: '#1e293b', marginBottom: 6 },
+  flashPriceRowElite: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 10, minHeight: 35 },
+  flashSalePriceElite: { fontSize: 14, fontWeight: '900', color: '#ef4444', flexShrink: 1 },
+  flashOldPriceElite: { fontSize: 9, color: Colors.muted, textDecorationLine: 'line-through' },
+  
+  stockInfoElite: { marginBottom: 12 },
+  stockTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  stockLabel: { fontSize: 9, color: '#64748b' },
+  stockBarContainer: { height: 6, backgroundColor: '#f1f5f9', borderRadius: 3, overflow: 'hidden' },
+  stockBarFill: { height: '100%', backgroundColor: '#ef4444', borderRadius: 3 },
+  
+  cardActionsElite: { gap: 6 },
+  actionRowElite: { flexDirection: 'row', gap: 6 },
+  btnSecondaryElite: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#f8fafc', height: 36, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
+  btnSecTextElite: { fontSize: 10, fontWeight: '700', color: '#475569' },
+  btnFlashBuy: { backgroundColor: '#ef4444', height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#ef4444', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+  btnBuyTextElite: { color: Colors.white, fontSize: 13, fontWeight: '900' },
+
   popularGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.m },
   popularCard: { width: CARD_W, backgroundColor: Colors.white, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: '#f1f5f9' },
   popImageBox: { width: '100%', height: CARD_W * 0.75, borderRadius: 16, backgroundColor: '#f8fafc', marginBottom: 12, justifyContent: 'center', alignItems: 'center' },
   popularImage: { width: '80%', height: '80%' },
   popularName: { fontSize: 13, fontWeight: '700', color: Colors.primary, marginBottom: 8, minHeight: 36 },
+  popPriceContainer: { minHeight: 40, justifyContent: 'flex-start' },
   popPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   popularPrice: { fontSize: 15, fontWeight: '900', color: Colors.primary },
+  popOldPriceBox: { height: 16, justifyContent: 'center' },
+  popularOldPrice: { fontSize: 10, color: Colors.muted, textDecorationLine: 'line-through' },
+
+  // Action Buttons
+  cardActions: { marginTop: 12, gap: 8 },
+  cardActionRow: { flexDirection: 'row', gap: 6 },
+  btnSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
+  btnSecondaryText: { fontSize: 9, fontWeight: '800', color: Colors.primary },
+  btnBuy: { backgroundColor: Colors.secondary, paddingVertical: 10, borderRadius: 12, alignItems: 'center', shadowColor: Colors.secondary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 },
+  btnBuyText: { color: Colors.white, fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
 });
 
 export default HomeScreen;

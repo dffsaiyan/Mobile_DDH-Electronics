@@ -14,6 +14,22 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     loadStoredAuth();
+
+    // 🛡️ GLOBAL 401 INTERCEPTOR (LOGOUT ON SESSION EXPIRE)
+    const interceptor = apiClient.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        // Don't trigger auto-logout if the error comes from the login route itself
+        const isLoginRoute = error.config?.url?.includes('/v1/login');
+        
+        if (error.response?.status === 401 && !isLoginRoute) {
+          await logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => apiClient.interceptors.response.eject(interceptor);
   }, []);
 
   const loadStoredAuth = async () => {

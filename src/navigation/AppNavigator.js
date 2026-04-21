@@ -64,8 +64,14 @@ const BottomTabBar = ({ navigation, activeTab }) => {
   );
 };
 
-const HomeTabsScreen = ({ navigation }) => {
+const HomeTabsScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState('Home');
+
+  useEffect(() => {
+    if (route.params?.screen) {
+      setActiveTab(route.params.screen);
+    }
+  }, [route.params?.screen]);
 
   const handleTabNavigation = (tabKey) => setActiveTab(tabKey);
 

@@ -47,14 +47,22 @@ const LoginScreen = ({ navigation }) => {
     }
     
     setLoading(true);
-    const result = await login(email, password);
-    setLoading(false);
-    
-    if (!result.success) {
-      showToast(result.message || 'Đăng nhập thất bại.', 'error');
-    } else {
-      showToast('Đăng nhập thành công!');
-      setTimeout(() => navigation.navigate('HomeTabs'), 1000);
+    try {
+      const result = await login(email, password);
+      if (!result.success) {
+        setStatus('error');
+        setMessage(result.message || 'Đăng nhập thất bại.');
+        showToast(result.message || 'Đăng nhập thất bại.', 'error');
+      } else {
+        setStatus('success');
+        setMessage('Đăng nhập thành công!');
+        showToast('Đăng nhập thành công!');
+        setTimeout(() => navigation.navigate('HomeTabs'), 1000);
+      }
+    } catch (error) {
+      showToast('Có lỗi xảy ra, vui lòng thử lại.', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,6 +200,21 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Đăng Nhập</Text>
             <Text style={styles.formSubtitle}>Chào mừng quay trở lại với kỷ nguyên số DDH</Text>
+
+            {/* STATUS BOX (NEW) */}
+            {status && (
+              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
+                <Icon 
+                  name={status === 'success' ? "check-circle" : "exclamation-triangle"} 
+                  size={16} 
+                  color={status === 'success' ? '#15803d' : '#b91c1c'} 
+                  style={{ marginRight: 10 }}
+                />
+                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
+                  {message}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>EMAIL</Text>

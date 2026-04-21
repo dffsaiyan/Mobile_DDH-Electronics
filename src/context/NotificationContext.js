@@ -6,7 +6,10 @@ import { Colors } from '../styles/Theme';
 
 const { width, height } = Dimensions.get('window');
 
-const NotificationContext = createContext();
+const NotificationContext = createContext({
+  showToast: () => {},
+  showConfirm: () => {}
+});
 
 export const NotificationProvider = ({ children }) => {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });

@@ -163,7 +163,13 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <Icon name="chevron-left" size={18} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{product.name}</Text>
-        <TouchableOpacity onPress={() => toggleWishlist(product)} style={styles.headerBtn}>
+        <TouchableOpacity 
+          onPress={() => {
+            toggleWishlist(product);
+            showToast(isInWishlist(product.id) ? 'Đã xóa khỏi danh sách yêu thích' : 'Đã thêm vào danh sách yêu thích', 'info');
+          }} 
+          style={styles.headerBtn}
+        >
           <Icon name="heart" size={18} color={isInWishlist(product.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(product.id)} />
         </TouchableOpacity>
       </View>
