@@ -2,9 +2,13 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, Image, Alert, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Linking
+  StatusBar, Image, Alert, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Linking,
+  ImageBackground, Dimensions
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { height, width } = Dimensions.get('window');
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -51,17 +55,36 @@ const AccountScreen = ({ navigation }) => {
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        <View style={styles.guestContainer}>
-          <Image source={{ uri: `${IMAGE_BASE_URL}/images/auth_mascot.png` }} style={styles.guestMascot} />
-          <Text style={styles.guestTitle}>Chào Bạn!</Text>
-          <Text style={styles.guestSubtitle}>Đăng nhập để trải nghiệm đặc quyền DDH-Elite và quản lý tài khoản của bạn.</Text>
-          <TouchableOpacity style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginBtnText}>ĐĂNG NHẬP NGAY</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.guestFullContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        
+        <ImageBackground 
+          source={{ uri: `${IMAGE_BASE_URL}/images/auth_mascot.png` }} 
+          style={styles.guestMascotFull}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.5)', '#fff']}
+            style={styles.guestGradient}
+          >
+            <View style={styles.authCardElite}>
+              <Text style={styles.guestTitle}>Chào Bạn!</Text>
+              <Text style={styles.guestSubtitle}>Đăng nhập để trải nghiệm đặc quyền DDH-Elite và quản lý tài khoản của bạn.</Text>
+              
+              <TouchableOpacity style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginBtnText}>ĐĂNG NHẬP NGAY</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.loginBtn, { backgroundColor: '#64748b', marginTop: 15 }]} 
+                onPress={() => navigation.navigate('Register')}
+              >
+                <Text style={styles.loginBtnText}>ĐĂNG KÝ TÀI KHOẢN</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </ImageBackground>
+      </View>
     );
   }
 
@@ -235,12 +258,32 @@ const styles = StyleSheet.create({
   saveBtnContent: { flexDirection: 'row', alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
 
-  // Guest State
-  guestContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  guestMascot: { width: 150, height: 150, marginBottom: 20 },
+  // Guest State Elite
+  guestFullContainer: { flex: 1, backgroundColor: '#fff', marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : 0 },
+  guestMascotFull: { width: width, height: height },
+  guestGradient: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 25,
+  },
+  authCardElite: {
+    backgroundColor: 'rgba(255,255,255,0.92)', // Hơi mờ để nhìn thấy robot thấp thoáng phía sau
+    width: '100%',
+    padding: 30,
+    borderRadius: 35,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)'
+  },
   guestTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b', marginBottom: 10 },
-  guestSubtitle: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 30 },
-  loginBtn: { backgroundColor: '#0f172a', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30 },
+  guestSubtitle: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 30, lineHeight: 20 },
+  loginBtn: { backgroundColor: '#0f172a', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30, width: '100%', alignItems: 'center' },
   loginBtnText: { color: '#fff', fontWeight: 'bold' },
 });
 

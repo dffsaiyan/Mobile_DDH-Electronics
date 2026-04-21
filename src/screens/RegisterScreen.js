@@ -311,18 +311,19 @@ const styles = StyleSheet.create({
   eyeIcon: { width: 50, alignItems: 'center', justifyContent: 'center' },
 
   registerButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 50,
-    padding: 15,
+    backgroundColor: '#0d6efd', // var(--primary-blue) Bootstrap
+    borderRadius: 50, // rounded-pill
+    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 15,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, // shadow-sm
   },
-  registerButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold', letterSpacing: 1 },
+  registerButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 0.5 },
   
   loginContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   loginText: { color: '#64748b', fontSize: 13 },
