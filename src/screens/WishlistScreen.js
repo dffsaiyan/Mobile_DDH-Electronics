@@ -31,7 +31,7 @@ const WishlistScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
 
   const handleAddToCart = (item) => {
-    addToCart({ ...item, sale_price: item.sale_price || item.price });
+    addToCart({ ...item, sale_price: Number(item.sale_price) > 0 ? item.sale_price : item.price });
     removeFromWishlist(item.id);
   };
 
@@ -154,8 +154,8 @@ const WishlistScreen = ({ navigation }) => {
               <Text style={styles.cardCategory}>{item.category?.name || 'Sản phẩm'}</Text>
               <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.salePrice}>{formatPrice(item.sale_price || item.price)}</Text>
-                {item.sale_price < item.price && (
+                <Text style={styles.salePrice}>{formatPrice(Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
+                {Number(item.sale_price) > 0 && Number(item.sale_price) < Number(item.price) && (
                   <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
                 )}
               </View>

@@ -232,7 +232,7 @@ const HomeScreen = ({ navigation }) => {
                   <Image source={{ uri: getImageUrl(item.image) }} style={styles.liveSearchImg} resizeMode="contain" />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.liveSearchName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.liveSearchPrice}>{formatPrice(item.sale_price || item.price)}</Text>
+                    <Text style={styles.liveSearchPrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
                   </View>
                   <Icon name="chevron-right" size={10} color={Colors.muted} />
                 </TouchableOpacity>
@@ -333,10 +333,17 @@ const HomeScreen = ({ navigation }) => {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
               {data.flash_sale.map(item => (
                 <TouchableOpacity key={item.id} style={styles.flashCard} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
-                  <View style={styles.flashImageBox}><Image source={{ uri: getImageUrl(item.image) }} style={styles.flashImage} resizeMode="contain" /><View style={styles.flashTag}><Text style={styles.flashTagText}>-{Math.round(((item.price - item.sale_price) / item.price) * 100)}%</Text></View></View>
+                  <View style={styles.flashImageBox}>
+                    <Image source={{ uri: getImageUrl(item.image) }} style={styles.flashImage} resizeMode="contain" />
+                    {item.is_flash_sale && Number(item.sale_price) > 0 && (
+                      <View style={styles.flashTag}>
+                        <Text style={styles.flashTagText}>-{Math.round(((Number(item.price) - Number(item.sale_price)) / Number(item.price)) * 100)}%</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.flashName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.flashSalePrice}>{formatPrice(item.sale_price)}</Text>
-                  <Text style={styles.flashOldPrice}>{formatPrice(item.price)}</Text>
+                  <Text style={styles.flashSalePrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
+                  <Text style={styles.flashOldPrice}>{item.is_flash_sale && Number(item.sale_price) > 0 ? formatPrice(item.price) : ''}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -354,7 +361,7 @@ const HomeScreen = ({ navigation }) => {
               <TouchableOpacity key={item.id} style={styles.popularCard} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
                 <View style={styles.popImageBox}><Image source={{ uri: getImageUrl(item.image) }} style={styles.popularImage} resizeMode="contain" /></View>
                 <Text style={styles.popularName} numberOfLines={2}>{item.name}</Text>
-                <View style={styles.popPriceRow}><Text style={styles.popularPrice}>{formatPrice(item.sale_price)}</Text><TouchableOpacity onPress={() => toggleWishlist(item)}><Icon name="heart" size={14} color={isInWishlist(item.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(item.id)} /></TouchableOpacity></View>
+                <View style={styles.popPriceRow}><Text style={styles.popularPrice}>{formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text><TouchableOpacity onPress={() => toggleWishlist(item)}><Icon name="heart" size={14} color={isInWishlist(item.id) ? Colors.secondary : Colors.muted} solid={isInWishlist(item.id)} /></TouchableOpacity></View>
               </TouchableOpacity>
             ))}
           </View>

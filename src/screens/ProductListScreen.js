@@ -66,7 +66,7 @@ const formatPrice = (price) => {
 // 🃏 PRODUCT CARD COMPONENT
 const ProductCard = ({ item, onPress }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const hasDiscount = item.sale_price > 0 && item.sale_price < item.price;
+  const hasDiscount = item.is_flash_sale && item.sale_price > 0 && item.sale_price < item.price;
   const discountPercent = hasDiscount
     ? Math.round(((item.price - item.sale_price) / item.price) * 100)
     : 0;
@@ -88,7 +88,7 @@ const ProductCard = ({ item, onPress }) => {
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
         
         <View style={styles.priceRow}>
-          <Text style={styles.salePrice}>{formatPrice(item.sale_price || item.price)}</Text>
+          <Text style={styles.salePrice}>{formatPrice(hasDiscount ? item.sale_price : item.price)}</Text>
           {hasDiscount && (
             <Text style={styles.originalPrice}>{formatPrice(item.price)}</Text>
           )}

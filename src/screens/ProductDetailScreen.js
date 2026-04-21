@@ -126,8 +126,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const organizedReviews = organizeReviews();
-  const hasDiscount = product.sale_price < product.price;
-  const discountPercent = hasDiscount ? Math.round(((product.price - product.sale_price) / product.price) * 100) : 0;
+  const hasDiscount = item.is_flash_sale && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.price);
+  const discountPercent = hasDiscount ? Math.round(((Number(product.price) - Number(product.sale_price)) / Number(product.price)) * 100) : 0;
   const savings = hasDiscount ? product.price - product.sale_price : 0;
   
   const ratedReviews = product.reviews?.filter(r => r.rating && r.rating > 0) || [];
@@ -219,7 +219,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
           {/* Price Box */}
           <View style={styles.priceBox}>
             <View style={styles.priceRow}>
-              <Text style={styles.salePrice}>{formatPrice(product.sale_price || product.price)}</Text>
+              <Text style={styles.salePrice}>{formatPrice(hasDiscount ? product.sale_price : product.price)}</Text>
               {hasDiscount && <Text style={styles.oldPrice}>{formatPrice(product.price)}</Text>}
             </View>
             {hasDiscount && (
@@ -425,7 +425,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                         <TouchableOpacity key={item.id} style={styles.relatedCard} onPress={() => navigation.push('ProductDetail', { product: item })}>
                             <Image source={{ uri: getImageUrl(item.image) }} style={styles.relatedImg} resizeMode="contain" />
                             <Text style={styles.relatedName} numberOfLines={2}>{item.name}</Text>
-                            <Text style={styles.relatedPrice}>{formatPrice(item.sale_price || item.price)}</Text>
+                            <Text style={styles.relatedPrice}>{formatPrice(Number(item.sale_price) > 0 ? item.sale_price : item.price)}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
