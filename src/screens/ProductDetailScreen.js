@@ -126,7 +126,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const organizedReviews = organizeReviews();
-  const hasDiscount = item.is_flash_sale && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.price);
+  const hasDiscount = product.is_flash_sale && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.price);
   const discountPercent = hasDiscount ? Math.round(((Number(product.price) - Number(product.sale_price)) / Number(product.price)) * 100) : 0;
   const savings = hasDiscount ? product.price - product.sale_price : 0;
   
