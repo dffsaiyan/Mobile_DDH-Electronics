@@ -60,7 +60,7 @@ const getImageUrl = (path) => {
   return `${baseUrl}/storage/${cleanPath}`;
 };
 
-const formatPrice = (price) => Math.round(price).toLocaleString('vi-VN') + 'đ';
+const formatPrice = (price) => Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
 
 // 🏠 HOME SCREEN
 const HomeScreen = ({ navigation }) => {

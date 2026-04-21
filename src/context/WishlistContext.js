@@ -24,14 +24,6 @@ export const WishlistProvider = ({ children }) => {
 
   const fetchWishlistFromApi = async () => {
     try {
-      const authHeader = apiClient.defaults.headers.common['Authorization'];
-      console.log('Fetching Wishlist. Auth Header:', authHeader ? 'Present' : 'MISSING');
-      
-      if (!authHeader) {
-        console.warn('Wishlist fetch aborted: No Authorization header');
-        return;
-      }
-
       const response = await apiClient.get('/v1/wishlist');
       if (response.data.success) {
         setWishlistItems(response.data.data);

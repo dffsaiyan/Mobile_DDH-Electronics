@@ -90,7 +90,6 @@ export const AuthProvider = ({ children }) => {
 
   const socialLogin = async (userData, authToken) => {
     try {
-      console.log('--- Social Login Token Received ---');
       setUser(userData);
       setToken(authToken);
       
@@ -100,10 +99,8 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('auth_token', authToken);
       await AsyncStorage.setItem('auth_user', JSON.stringify(userData));
       
-      console.log('Auth storage updated successfully');
       return { success: true };
     } catch (error) {
-      console.error('Social Login Storage Error:', error);
       return { success: false, message: 'Lỗi lưu thông tin đăng nhập.' };
     }
   };

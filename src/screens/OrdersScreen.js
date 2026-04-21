@@ -10,6 +10,10 @@ import { useAuth } from '../context/AuthContext';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
+const formatPrice = (price) => {
+  return Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
+};
+
 const STATUS_MAP = {
   pending: { label: 'Chờ xử lý', color: '#f59e0b', bg: '#fffbeb', icon: 'clock' },
   processing: { label: 'Đang xử lý', color: '#3b82f6', bg: '#eff6ff', icon: 'sync' },
@@ -43,7 +47,7 @@ const OrderCard = ({ order, onPress }) => {
       </View>
       <View style={styles.cardFooter}>
         <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-        <Text style={styles.totalPrice}>{(order.total || 0).toLocaleString('vi-VN')}đ</Text>
+        <Text style={styles.totalPrice}>{formatPrice(order.total || 0)}</Text>
       </View>
     </TouchableOpacity>
   );

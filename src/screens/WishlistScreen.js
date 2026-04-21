@@ -21,6 +21,10 @@ const getImageUrl = (path) => {
   return `${IMAGE_BASE_URL}/${cleanPath}`;
 };
 
+const formatPrice = (price) => {
+  return Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
+};
+
 const WishlistScreen = ({ navigation }) => {
   const { wishlistItems, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
@@ -91,13 +95,29 @@ const WishlistScreen = ({ navigation }) => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconContainer}>
-        <FaIcon name="heart-o" size={80} color="#e2e8f0" />
+      <View style={styles.emptyIconCircle}>
+        <View style={styles.emptyIconBg}>
+          <Icon name="heart" size={50} color={Colors.secondary} opacity={0.2} />
+        </View>
+        <View style={styles.emptyHeartIcon}>
+          <Icon name="plus" size={14} color={Colors.white} />
+        </View>
       </View>
-      <Text style={styles.emptyTitle}>Danh sách yêu thích trống!</Text>
-      <Text style={styles.emptySubtitle}>Hãy thêm những sản phẩm bạn yêu thích để dễ dàng theo dõi và mua sắm sau này.</Text>
-      <TouchableOpacity style={styles.shopBtn} onPress={() => navigation.navigate('HomeTabs')}>
-        <Text style={styles.shopBtnText}>KHÁM PHÁ CỬA HÀNG</Text>
+      <Text style={styles.emptyTitle}>DANH SÁCH ĐANG TRỐNG!</Text>
+      <Text style={styles.emptySubtitle}>
+        Bạn chưa thêm "siêu phẩm" nào vào danh sách yêu thích. Hãy khám phá ngay để không bỏ lỡ những món đồ ưng ý!
+      </Text>
+      <TouchableOpacity 
+        style={styles.shopBtn} 
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('HomeTabs')}
+      >
+        <View style={styles.shopBtnContent}>
+          <Text style={styles.shopBtnText}>KHÁM PHÁ CỬA HÀNG</Text>
+          <View style={styles.shopBtnIcon}>
+            <Icon name="arrow-right" size={12} color={Colors.white} />
+          </View>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -134,9 +154,9 @@ const WishlistScreen = ({ navigation }) => {
               <Text style={styles.cardCategory}>{item.category?.name || 'Sản phẩm'}</Text>
               <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.salePrice}>{(item.sale_price || item.price).toLocaleString('vi-VN')}đ</Text>
+                <Text style={styles.salePrice}>{formatPrice(item.sale_price || item.price)}</Text>
                 {item.sale_price < item.price && (
-                  <Text style={styles.oldPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                  <Text style={styles.oldPrice}>{formatPrice(item.price)}</Text>
                 )}
               </View>
               <View style={styles.actionRow}>
@@ -199,12 +219,16 @@ const styles = StyleSheet.create({
   removeBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#fef2f2', justifyContent: 'center', alignItems: 'center' },
 
   // Empty State
-  emptyContainer: { paddingVertical: 80, alignItems: 'center', paddingHorizontal: 40 },
-  emptyIconContainer: { marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#64748b', marginBottom: 10 },
-  emptySubtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 30, lineHeight: 20 },
-  shopBtn: { backgroundColor: '#0f172a', paddingHorizontal: 35, paddingVertical: 16, borderRadius: 50, ...Shadow.medium },
-  shopBtnText: { fontSize: 13, fontWeight: 'bold', color: '#fff', letterSpacing: 1 },
+  emptyContainer: { paddingVertical: 80, alignItems: 'center', paddingHorizontal: 40, backgroundColor: '#fff' },
+  emptyIconCircle: { width: 140, height: 140, marginBottom: 20, justifyContent: 'center', alignItems: 'center' },
+  emptyIconBg: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 2 },
+  emptyHeartIcon: { position: 'absolute', bottom: 15, right: 15, backgroundColor: Colors.secondary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: '#fff', elevation: 4 },
+  emptyTitle: { fontSize: 20, fontWeight: '900', color: Colors.primary, marginBottom: 10, letterSpacing: -0.5 },
+  emptySubtitle: { fontSize: 13, color: Colors.muted, textAlign: 'center', marginBottom: 35, lineHeight: 20 },
+  shopBtn: { backgroundColor: Colors.primary, borderRadius: 50, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 8, overflow: 'hidden' },
+  shopBtnContent: { flexDirection: 'row', alignItems: 'center', paddingLeft: 30, paddingRight: 10, paddingVertical: 10 },
+  shopBtnText: { fontSize: 13, fontWeight: '900', color: Colors.white, letterSpacing: 1, marginRight: 15 },
+  shopBtnIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
 });
 
 export default WishlistScreen;

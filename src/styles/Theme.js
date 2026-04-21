@@ -12,6 +12,8 @@ export const Colors = {
   danger: '#ef4444',
   warning: '#f59e0b',
   info: '#3b82f6',
+  dark: '#0f172a',          // Alias for primary
+  light: '#f8fafc',         // Alias for gray
   
   // Premium Gradients (Simulated via colors)
   bgGradient: ['#ffffff', '#f8fafc'],

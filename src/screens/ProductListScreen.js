@@ -60,7 +60,7 @@ const getImageUrl = (path) => {
 };
 
 const formatPrice = (price) => {
-  return Math.round(price).toLocaleString('vi-VN') + 'đ';
+  return Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
 };
 
 // 🃏 PRODUCT CARD COMPONENT

@@ -7,6 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../styles/Theme';
 import apiClient from '../api/apiClient';
 
+const formatPrice = (price) => {
+  return Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
+};
+
 const STATUS_MAP = {
   pending: { label: 'Chờ xử lý', color: Colors.warning, bg: '#FEF3C7', icon: '⏳' },
   processing: { label: 'Đang xử lý', color: '#3B82F6', bg: '#DBEAFE', icon: '📋' },
@@ -104,7 +108,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
                   </TouchableOpacity>
                 )}
               </View>
-              <Text style={styles.itemPrice}>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</Text>
+              <Text style={styles.itemPrice}>{formatPrice(item.price * item.quantity)}</Text>
             </View>
           ))}
         </View>
@@ -114,22 +118,22 @@ const OrderDetailScreen = ({ route, navigation }) => {
           <Text style={styles.sectionTitle}>📋 Tóm tắt</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tạm tính</Text>
-            <Text style={styles.summaryValue}>{(order.subtotal || order.total || 0).toLocaleString('vi-VN')}đ</Text>
+            <Text style={styles.summaryValue}>{formatPrice(order.subtotal || order.total || 0)}</Text>
           </View>
           {order.discount > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Giảm giá</Text>
-              <Text style={[styles.summaryValue, { color: Colors.success }]}>-{order.discount.toLocaleString('vi-VN')}đ</Text>
+              <Text style={[styles.summaryValue, { color: Colors.success }]}>-{formatPrice(order.discount)}</Text>
             </View>
           )}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Phí vận chuyển</Text>
-            <Text style={styles.summaryValue}>{order.shipping_fee === 0 ? 'Miễn phí' : `${(order.shipping_fee || 0).toLocaleString('vi-VN')}đ`}</Text>
+            <Text style={styles.summaryValue}>{order.shipping_fee === 0 ? 'Miễn phí' : formatPrice(order.shipping_fee || 0)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>Tổng cộng</Text>
-            <Text style={styles.totalValue}>{(order.total || 0).toLocaleString('vi-VN')}đ</Text>
+            <Text style={styles.totalValue}>{formatPrice(order.total || 0)}</Text>
           </View>
         </View>
 

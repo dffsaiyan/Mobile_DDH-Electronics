@@ -112,19 +112,31 @@ const CartScreen = ({ navigation }) => {
   if (cartItems.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconCircle}>
-            <Icon name="shopping-basket" size={50} color="#e2e8f0" />
+            <View style={styles.emptyIconBg}>
+              <Icon name="shopping-basket" size={50} color={Colors.secondary} opacity={0.2} />
+            </View>
             <View style={styles.emptySearchIcon}>
-              <Icon name="search" size={12} color={Colors.dark} />
+              <Icon name="search" size={14} color={Colors.white} />
             </View>
           </View>
           <Text style={styles.emptyTitle}>GIỎ HÀNG ĐANG TRỐNG!</Text>
           <Text style={styles.emptySubtitle}>
-            Có vẻ như bạn chưa chọn được "vũ khí" nào cho trạm chiến đấu của mình.
+            Có vẻ như bạn chưa chọn được "vũ khí" nào cho trạm chiến đấu của mình. Hãy lấp đầy nó bằng những siêu phẩm công nghệ!
           </Text>
-          <TouchableOpacity style={styles.shopBtn} onPress={() => navigation.navigate('ProductList')}>
-            <Text style={styles.shopBtnText}>KHÁM PHÁ CỬA HÀNG <Icon name="arrow-right" size={12} color={Colors.white} /></Text>
+          <TouchableOpacity 
+            style={styles.shopBtn} 
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('ProductList')}
+          >
+            <View style={styles.shopBtnContent}>
+              <Text style={styles.shopBtnText}>KHÁM PHÁ CỬA HÀNG</Text>
+              <View style={styles.shopBtnIcon}>
+                <Icon name="arrow-right" size={12} color={Colors.white} />
+              </View>
+            </View>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -311,13 +323,16 @@ const styles = StyleSheet.create({
   mainCheckoutText: { fontSize: 15, fontWeight: '900', color: Colors.white, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Empty State
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  emptyIconCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center', marginBottom: 30 },
-  emptySearchIcon: { position: 'absolute', bottom: 10, right: 10, backgroundColor: Colors.secondary, width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
-  emptyTitle: { fontSize: 20, fontWeight: '900', color: Colors.dark, marginBottom: 15, letterSpacing: -0.5 },
-  emptySubtitle: { fontSize: 14, color: Colors.muted, textAlign: 'center', lineHeight: 22, marginBottom: 35 },
-  shopBtn: { backgroundColor: Colors.dark, paddingHorizontal: 30, paddingVertical: 18, borderRadius: 50, shadowColor: Colors.dark, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 8 },
-  shopBtnText: { fontSize: 13, fontWeight: '900', color: Colors.white, textTransform: 'uppercase', letterSpacing: 1 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, backgroundColor: '#f8fafc' },
+  emptyIconCircle: { width: 140, height: 140, marginBottom: 30, justifyContent: 'center', alignItems: 'center' },
+  emptyIconBg: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5 },
+  emptySearchIcon: { position: 'absolute', bottom: 15, right: 15, backgroundColor: Colors.secondary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: '#f8fafc', elevation: 6 },
+  emptyTitle: { fontSize: 22, fontWeight: '900', color: Colors.dark, marginBottom: 15, letterSpacing: -0.5 },
+  emptySubtitle: { fontSize: 14, color: Colors.muted, textAlign: 'center', lineHeight: 22, marginBottom: 40, paddingHorizontal: 10 },
+  shopBtn: { backgroundColor: Colors.primary, borderRadius: 50, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10, overflow: 'hidden' },
+  shopBtnContent: { flexDirection: 'row', alignItems: 'center', paddingLeft: 30, paddingRight: 10, paddingVertical: 10 },
+  shopBtnText: { fontSize: 13, fontWeight: '900', color: Colors.white, letterSpacing: 1, marginRight: 15 },
+  shopBtnIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
 });
 
 export default CartScreen;
