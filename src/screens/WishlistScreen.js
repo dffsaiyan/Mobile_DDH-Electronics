@@ -9,6 +9,7 @@ import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome5 as Icon, FontAwesome as FaIcon } from '@expo/vector-icons';
 
@@ -29,10 +30,12 @@ const WishlistScreen = ({ navigation }) => {
   const { wishlistItems, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
   const { user, logout } = useAuth();
+  const { showToast } = useNotification();
 
   const handleAddToCart = (item) => {
     addToCart({ ...item, sale_price: Number(item.sale_price) > 0 ? item.sale_price : item.price });
     removeFromWishlist(item.id);
+    showToast(`Đã chuyển ${item.name} vào giỏ hàng!`, 'success');
   };
 
   const handleLogout = () => {
@@ -164,7 +167,10 @@ const WishlistScreen = ({ navigation }) => {
                   <Icon name="shopping-cart" size={12} color="#fff" style={{marginRight: 6}} />
                   <Text style={styles.cartBtnText}>THÊM GIỎ</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.removeBtn} onPress={() => removeFromWishlist(item.id)}>
+                <TouchableOpacity style={styles.removeBtn} onPress={() => {
+                  removeFromWishlist(item.id);
+                  showToast('Đã xóa khỏi danh sách yêu thích', 'info');
+                }}>
                   <Icon name="trash-alt" size={16} color="#ef4444" />
                 </TouchableOpacity>
               </View>

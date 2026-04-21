@@ -6,10 +6,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../styles/Theme';
+import { useNotification } from '../context/NotificationContext';
 import apiClient from '../api/apiClient';
 
 const ReviewScreen = ({ route, navigation }) => {
   const { product } = route.params;
+  const { showToast } = useNotification();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,12 +25,13 @@ const ReviewScreen = ({ route, navigation }) => {
         comment,
       });
       if (response.data.success) {
-        Alert.alert('Thành công', 'Cảm ơn bạn đã để lại đánh giá!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        showToast('Cảm ơn bạn đã để lại đánh giá tuyệt vời!', 'success');
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1500);
       }
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.');
+      showToast('Không thể gửi đánh giá. Vui lòng thử lại sau.', 'error');
     } finally {
       setLoading(false);
     }

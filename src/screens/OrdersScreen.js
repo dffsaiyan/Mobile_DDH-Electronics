@@ -7,11 +7,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
 const formatPrice = (price) => {
+  if (!price || isNaN(price)) return '0 VNĐ';
   return Math.round(price).toLocaleString('vi-VN') + ' VNĐ';
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'Vừa xong';
+  try {
+    const date = new Date(dateString);
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${h}:${m} - ${d}/${mo}/${y}`;
+  } catch (e) {
+    return dateString;
+  }
 };
 
 const STATUS_MAP = {
@@ -24,37 +41,51 @@ const STATUS_MAP = {
 
 const OrderCard = ({ order, onPress }) => {
   const status = STATUS_MAP[order.status] || STATUS_MAP.pending;
+  const itemsCount = order.items_count || order.items?.length || 0;
+
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(order)} activeOpacity={0.8}>
       <View style={styles.cardHeader}>
         <View style={styles.orderBadge}>
-          <Text style={styles.orderId}>Đơn #{order.id}</Text>
+          <Text style={styles.orderId}>Mã đơn #{order.id}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
           <Icon name={status.icon} size={10} color={status.color} style={{ marginRight: 5 }} />
           <Text style={[styles.statusText, { color: status.color }]}>{status.label.toUpperCase()}</Text>
         </View>
       </View>
+      
       <View style={styles.cardBody}>
-        <View style={styles.infoRow}>
-          <Icon name="calendar-alt" size={12} color="#94a3b8" />
-          <Text style={styles.infoText}>{order.created_at || 'Vừa xong'}</Text>
+        <View style={styles.infoCol}>
+          <View style={styles.infoRow}>
+            <Icon name="calendar-alt" size={12} color="#94a3b8" />
+            <Text style={styles.infoText}>{formatDate(order.created_at)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon name="box" size={12} color="#94a3b8" />
+            <Text style={styles.infoText}>{itemsCount} sản phẩm</Text>
+          </View>
         </View>
-        <View style={styles.infoRow}>
-          <Icon name="box" size={12} color="#94a3b8" />
-          <Text style={styles.infoText}>{order.items_count || 0} sản phẩm</Text>
+        <View style={styles.priceContainer}>
+          <Text style={styles.totalLabel}>Tổng tiền</Text>
+          <Text style={styles.totalPrice}>{formatPrice(order.total_price || order.total || order.total_amount || order.grand_total || 0)}</Text>
         </View>
       </View>
-      <View style={styles.cardFooter}>
-        <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-        <Text style={styles.totalPrice}>{formatPrice(order.total || 0)}</Text>
-      </View>
+
+      <TouchableOpacity 
+        style={styles.viewDetailBtn} 
+        onPress={() => onPress(order)}
+      >
+        <Text style={styles.viewDetailText}>XEM CHI TIẾT</Text>
+        <Icon name="chevron-right" size={10} color="#0f172a" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
 
 const OrdersScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { showToast } = useNotification();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -62,8 +93,10 @@ const OrdersScreen = ({ navigation }) => {
   const TABS = [
     { key: 'all', label: 'Tất cả' },
     { key: 'pending', label: 'Chờ xử lý' },
+    { key: 'processing', label: 'Đang xử lý' },
     { key: 'shipping', label: 'Đang giao' },
-    { key: 'delivered', label: 'Đã giao' },
+    { key: 'completed', label: 'Đã giao' },
+    { key: 'cancelled', label: 'Đã hủy' },
   ];
 
   useEffect(() => {
@@ -84,6 +117,20 @@ const OrdersScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Xác nhận thoát', 'Bạn có chắc chắn muốn đăng xuất tài khoản DDH Elite?', [
+      { text: 'Hủy', style: 'cancel' },
+      { 
+        text: 'Đăng xuất', 
+        style: 'destructive', 
+        onPress: () => {
+          logout();
+          showToast('Đã đăng xuất thành công!', 'info');
+        } 
+      },
+    ]);
   };
 
   const renderHeader = () => (
@@ -123,7 +170,7 @@ const OrdersScreen = ({ navigation }) => {
             <Text style={[styles.menuLabel, {color: '#3b82f6'}]}>Quản trị</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.menuItem} onPress={logout}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <Icon name="sign-out-alt" size={16} color="#ef4444" />
           <Text style={[styles.menuLabel, {color: '#ef4444'}]}>Thoát</Text>
         </TouchableOpacity>
@@ -227,18 +274,31 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
 
   // Cards
-  card: { backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 20, padding: 18, marginBottom: 15, borderWidth: 1, borderColor: '#f1f5f9', ...Shadow.tiny },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  orderBadge: { backgroundColor: '#f8fafc', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  orderId: { fontSize: 14, fontWeight: '900', color: '#1e293b' },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 50 },
-  statusText: { fontSize: 9, fontWeight: '800' },
-  cardBody: { flexDirection: 'row', gap: 20, marginBottom: 15 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  infoText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 15 },
-  totalLabel: { fontSize: 13, color: '#64748b', fontWeight: '600' },
-  totalPrice: { fontSize: 16, fontWeight: '900', color: '#1e293b' },
+  card: { backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 24, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#f1f5f9', ...Shadow.tiny },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  orderBadge: { backgroundColor: '#f8fafc', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#f1f5f9' },
+  orderId: { fontSize: 13, fontWeight: '900', color: '#0f172a' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
+  statusText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  cardBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 },
+  infoCol: { gap: 10 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoText: { fontSize: 13, color: '#64748b', fontWeight: '600' },
+  priceContainer: { alignItems: 'flex-end' },
+  totalLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
+  totalPrice: { fontSize: 18, fontWeight: '900', color: '#0f172a' },
+  viewDetailBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 8, 
+    paddingVertical: 12, 
+    backgroundColor: '#f8fafc', 
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#f1f5f9'
+  },
+  viewDetailText: { fontSize: 11, fontWeight: '800', color: '#0f172a', letterSpacing: 1 },
 
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { paddingVertical: 60, alignItems: 'center', paddingHorizontal: 40 },

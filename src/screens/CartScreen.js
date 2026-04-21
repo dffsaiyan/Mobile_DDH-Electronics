@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../styles/Theme';
 import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
@@ -97,6 +98,7 @@ const CartItem = ({ item, onIncrease, onDecrease, onRemove }) => (
 
 const CartScreen = ({ navigation }) => {
   const { cartItems, totalItems, totalPrice, increaseQuantity, decreaseQuantity, removeFromCart, clearCart } = useCart();
+  const { showToast } = useNotification();
 
   const handleClearCart = () => {
     Alert.alert(
@@ -104,7 +106,14 @@ const CartScreen = ({ navigation }) => {
       'Bạn có chắc chắn muốn làm trống giỏ hàng?',
       [
         { text: 'Hủy', style: 'cancel' },
-        { text: 'Làm trống', style: 'destructive', onPress: clearCart }
+        { 
+          text: 'Làm trống', 
+          style: 'destructive', 
+          onPress: () => {
+            clearCart();
+            showToast('Giỏ hàng đã được làm trống!', 'info');
+          } 
+        }
       ]
     );
   };
@@ -186,7 +195,10 @@ const CartScreen = ({ navigation }) => {
               item={item} 
               onIncrease={increaseQuantity} 
               onDecrease={decreaseQuantity} 
-              onRemove={removeFromCart} 
+              onRemove={(id) => {
+                removeFromCart(id);
+                showToast('Đã xóa sản phẩm khỏi giỏ hàng', 'info');
+              }} 
             />
           ))}
         </View>

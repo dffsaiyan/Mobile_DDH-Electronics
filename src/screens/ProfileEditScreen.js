@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 
@@ -21,6 +22,7 @@ const getImageUrl = (path) => {
 
 const ProfileEditScreen = ({ navigation }) => {
   const { user, updateProfile } = useAuth();
+  const { showToast } = useNotification();
   const [name, setName] = useState((user?.name || '').replace(/\+/g, ' '));
   const [phone, setPhone] = useState((user?.phone || '').replace(/\+/g, ' '));
   const [address, setAddress] = useState((user?.address || '').replace(/\+/g, ' '));
@@ -28,18 +30,19 @@ const ProfileEditScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Thông báo', 'Tên không được để trống.');
+      showToast('Tên không được để trống bạn nhé!', 'warning');
       return;
     }
     setLoading(true);
     const result = await updateProfile({ name, phone, address });
     setLoading(false);
     if (result.success) {
-      Alert.alert('Thành công', 'Hồ sơ DDH Elite đã được cập nhật!', [
-        { text: 'Tuyệt vời', onPress: () => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Account') }
-      ]);
+      showToast('Hồ sơ DDH Elite đã được cập nhật thành công!', 'success');
+      setTimeout(() => {
+        navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Account');
+      }, 1500);
     } else {
-      Alert.alert('Lỗi', result.message);
+      showToast(result.message, 'error');
     }
   };
 

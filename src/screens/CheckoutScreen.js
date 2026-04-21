@@ -11,6 +11,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 
+import { useNotification } from '../context/NotificationContext';
+
 const Stepper = ({ currentStep }) => (
   <View style={styles.stepperContainer}>
     <View style={styles.stepLine} />
@@ -38,6 +40,7 @@ const Stepper = ({ currentStep }) => (
 const CheckoutScreen = ({ navigation }) => {
   const { cartItems, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
+  const { showToast } = useNotification();
   
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -107,16 +110,16 @@ const CheckoutScreen = ({ navigation }) => {
       const response = await apiClient.post('/v1/coupon/verify', { code: couponCode, total: totalPrice });
       if (response.data.success) {
         setDiscount(response.data.data.discount);
-        Alert.alert('Thành công', `Giảm ${response.data.data.discount.toLocaleString('vi-VN')}đ`);
+        showToast(`Tuyệt vời! Bạn được giảm ${response.data.data.discount.toLocaleString('vi-VN')}đ`, 'success');
       }
     } catch (error) {
-      Alert.alert('Lỗi', 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+      showToast('Mã giảm giá không hợp lệ hoặc đã hết hạn.', 'error');
     }
   };
 
   const handleCheckout = async () => {
     if (!name.trim() || !phone.trim() || !address.trim() || !province || !district) {
-      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ thông tin giao hàng.');
+      showToast('Vui lòng nhập đầy đủ thông tin giao hàng nhé!', 'warning');
       return;
     }
     setLoading(true);
@@ -143,7 +146,7 @@ const CheckoutScreen = ({ navigation }) => {
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Đặt hàng thất bại. Vui lòng thử lại.';
-      Alert.alert('Lỗi', msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -219,7 +222,7 @@ const CheckoutScreen = ({ navigation }) => {
 
           <View style={styles.inputRow}>
             <Text style={styles.eliteLabel}>Xã / Phường / Thị trấn</Text>
-            <TouchableOpacity style={styles.pickerTrigger} onPress={() => {if(!province) return Alert.alert('Lỗi', 'Chọn tỉnh trước'); setModalType('district'); setModalVisible(true)}}>
+            <TouchableOpacity style={styles.pickerTrigger} onPress={() => {if(!province) return showToast('Bạn hãy chọn tỉnh/thành phố trước nhé', 'warning'); setModalType('district'); setModalVisible(true)}}>
               <Text style={[styles.pickerText, !district && {color: '#94a3b8'}]}>{district || 'Chọn Xã/Phường'}</Text>
               <Icon name="chevron-down" size={12} color={Colors.muted} />
             </TouchableOpacity>

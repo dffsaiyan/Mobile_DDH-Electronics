@@ -7,9 +7,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
 import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
+import { useNotification } from '../context/NotificationContext';
 import { FontAwesome as Icon } from '@expo/vector-icons';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { showToast } = useNotification();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error' | null
@@ -28,13 +30,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setMessage('');
 
     if (!email.trim()) {
-      setStatus('error');
-      setMessage('Vui lòng nhập email của bạn.');
+      showToast('Vui lòng nhập email của bạn.', 'warning');
       return;
     }
     if (!validateEmail(email)) {
-      setStatus('error');
-      setMessage('Định dạng email không hợp lệ.');
+      showToast('Định dạng email không hợp lệ bạn ơi!', 'error');
       return;
     }
 
@@ -42,16 +42,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
     try {
       const response = await apiClient.post('/v1/password/email', { email });
       if (response.data.success) {
-        setStatus('success');
-        setMessage(response.data.message || 'Chúng tôi đã gửi liên kết khôi phục mật khẩu vào Email của bạn!');
+        showToast(response.data.message || 'Link khôi phục đã được gửi vào Email của bạn!', 'success');
       } else {
-        setStatus('error');
-        setMessage(response.data.message || 'Chúng tôi không tìm thấy người dùng nào với địa chỉ Email này.');
+        showToast(response.data.message || 'Không tìm thấy tài khoản với Email này.', 'error');
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Có lỗi xảy ra khi kết nối với máy chủ.';
-      setStatus('error');
-      setMessage(errorMsg);
+      const errorMsg = error.response?.data?.message || 'Lỗi kết nối máy chủ.';
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -87,20 +84,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             <Text style={styles.title}>Quên Mật Khẩu?</Text>
             <Text style={styles.subtitle}>Đừng lo lắng, chúng tôi sẽ giúp bạn lấy lại quyền truy cập vào kỳ nguyên số DDH.</Text>
 
-            {/* 💎 PREMIUM STATUS MESSAGE BOX */}
-            {status && (
-              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
-                <Icon 
-                  name={status === 'success' ? "check-circle" : "exclamation-circle"} 
-                  size={16} 
-                  color={status === 'success' ? "#15803d" : "#b91c1c"} 
-                  style={{ marginRight: 10 }}
-                />
-                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
-                  {message}
-                </Text>
-              </View>
-            )}
+            {/* Removed inline status box in favor of Toasts */}
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>ĐỊA CHỈ EMAIL</Text>

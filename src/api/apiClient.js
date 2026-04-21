@@ -13,4 +13,18 @@ const apiClient = axios.create({
   },
 });
 
+// 🛡️ GLOBAL ERROR INTERCEPTOR
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Việt hóa lỗi Unauthenticated từ Server
+      if (error.response.data) {
+        error.response.data.message = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;
