@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 import { WebView } from 'react-native-webview';
 import apiClient from '../api/apiClient';
@@ -22,6 +23,7 @@ const USER_AGENT = Platform.OS === 'ios'
 
 const LoginScreen = ({ navigation }) => {
   const { login, socialLogin } = useAuth();
+  const { showToast } = useNotification();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -40,8 +42,7 @@ const LoginScreen = ({ navigation }) => {
     setMessage('');
 
     if (!email.trim() || !password.trim()) {
-      setStatus('error');
-      setMessage('Vui lòng nhập đầy đủ email và mật khẩu.');
+      showToast('Vui lòng nhập đầy đủ email và mật khẩu.', 'error');
       return;
     }
     
@@ -50,11 +51,9 @@ const LoginScreen = ({ navigation }) => {
     setLoading(false);
     
     if (!result.success) {
-      setStatus('error');
-      setMessage(result.message || 'Đăng nhập thất bại.');
+      showToast(result.message || 'Đăng nhập thất bại.', 'error');
     } else {
-      setStatus('success');
-      setMessage('Đăng nhập thành công! Đang chuyển hướng...');
+      showToast('Đăng nhập thành công!');
       setTimeout(() => navigation.navigate('HomeTabs'), 1000);
     }
   };
@@ -73,14 +72,24 @@ const LoginScreen = ({ navigation }) => {
 
       try {
         const url = navState.url;
-        const tokenMatch = url.match(/token=([^&]+)/);
-        const userMatch = url.match(/user=([^&]+)/);
+        
+        // Helper function to get query params
+        const getParam = (name) => {
+          const match = url.match(new RegExp('[?&]' + name + '=([^&]*)'));
+          return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
+        };
 
-        if (tokenMatch && userMatch) {
-          const token = tokenMatch[1];
-          const userStr = decodeURIComponent(userMatch[1].replace(/\+/g, ' '));
-          const userData = JSON.parse(userStr);
-          
+        const token = getParam('token');
+        const userData = {
+          id: getParam('user_id'),
+          name: getParam('name'),
+          email: getParam('email'),
+          social_avatar: getParam('social_avatar'),
+          phone: getParam('phone'),
+          address: getParam('address')
+        };
+
+        if (token && userData.name) {
           await socialLogin(userData, token);
           navigation.navigate('HomeTabs');
         } else {
@@ -183,21 +192,6 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Đăng Nhập</Text>
             <Text style={styles.formSubtitle}>Chào mừng quay trở lại với kỷ nguyên số DDH</Text>
-
-            {/* 💎 PREMIUM STATUS MESSAGE BOX */}
-            {status && (
-              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
-                <Icon 
-                  name={status === 'success' ? "check-circle" : "exclamation-circle"} 
-                  size={16} 
-                  color={status === 'success' ? "#15803d" : "#b91c1c"} 
-                  style={{ marginRight: 10 }}
-                />
-                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
-                  {message}
-                </Text>
-              </View>
-            )}
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>EMAIL</Text>

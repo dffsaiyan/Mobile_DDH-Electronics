@@ -10,6 +10,7 @@ import apiClient from '../api/apiClient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { IMAGE_BASE_URL } from '../api/apiClient';
 import { FontAwesome as Icon } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +19,7 @@ const { width } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
   const { register, socialLogin } = useAuth();
+  const { showToast } = useNotification();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,13 +46,11 @@ const RegisterScreen = ({ navigation }) => {
     setMessage('');
 
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setStatus('error');
-      setMessage('Vui lòng nhập đầy đủ thông tin.');
+      showToast('Vui lòng nhập đầy đủ thông tin.', 'error');
       return;
     }
     if (password !== confirmPassword) {
-      setStatus('error');
-      setMessage('Mật khẩu xác nhận không khớp.');
+      showToast('Mật khẩu xác nhận không khớp.', 'error');
       return;
     }
     
@@ -59,11 +59,9 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(false);
     
     if (!result.success) {
-      setStatus('error');
-      setMessage(result.message || 'Đăng ký thất bại.');
+      showToast(result.message || 'Đăng ký thất bại.', 'error');
     } else {
-      setStatus('success');
-      setMessage('Gia nhập Elite thành công! Đang chuyển hướng...');
+      showToast('Gia nhập Elite thành công!');
       setTimeout(() => navigation.navigate('HomeTabs'), 1000);
     }
   };
@@ -76,24 +74,32 @@ const RegisterScreen = ({ navigation }) => {
 
       try {
         const url = navState.url;
-        const tokenMatch = url.match(/token=([^&]+)/);
-        const userMatch = url.match(/user=([^&]+)/);
+        
+        // Helper function to get query params
+        const getParam = (name) => {
+          const match = url.match(new RegExp('[?&]' + name + '=([^&]*)'));
+          return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : null;
+        };
 
-        if (tokenMatch && userMatch) {
-          const token = tokenMatch[1];
-          const userStr = decodeURIComponent(userMatch[1].replace(/\+/g, ' '));
-          const userData = JSON.parse(userStr);
-          
+        const token = getParam('token');
+        const userData = {
+          id: getParam('user_id'),
+          name: getParam('name'),
+          email: getParam('email'),
+          social_avatar: getParam('social_avatar'),
+          phone: getParam('phone'),
+          address: getParam('address')
+        };
+
+        if (token && userData.name) {
           await socialLogin(userData, token);
           navigation.navigate('HomeTabs');
         } else {
-          setStatus('error');
-          setMessage('Không thể lấy thông tin đăng ký.');
+          showToast('Không thể lấy thông tin đăng ký.', 'error');
         }
       } catch (error) {
         console.error('Social Registration Parsing Error:', error);
-        setStatus('error');
-        setMessage('Lỗi khi xử lý thông tin đăng ký.');
+        showToast('Lỗi khi xử lý thông tin đăng ký.', 'error');
       } finally {
         setLoading(false);
       }
@@ -183,21 +189,6 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.formContainer}>
             <Text style={styles.formTitle}>Đăng Ký</Text>
             <Text style={styles.formSubtitle}>Khởi tạo tài khoản DDH-Elite của riêng bạn</Text>
-
-            {/* 💎 PREMIUM STATUS MESSAGE BOX */}
-            {status && (
-              <View style={[styles.statusBox, status === 'success' ? styles.successBox : styles.errorBox]}>
-                <Icon 
-                  name={status === 'success' ? "check-circle" : "exclamation-circle"} 
-                  size={16} 
-                  color={status === 'success' ? "#15803d" : "#b91c1c"} 
-                  style={{ marginRight: 10 }}
-                />
-                <Text style={[styles.statusText, status === 'success' ? styles.successText : styles.errorText]}>
-                  {message}
-                </Text>
-              </View>
-            )}
 
             <View style={styles.inputWrapper}>
               <Text style={styles.label}>HỌ VÀ TÊN</Text>

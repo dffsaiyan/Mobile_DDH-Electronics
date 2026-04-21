@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ const { height, width } = Dimensions.get('window');
 
 const AccountScreen = ({ navigation }) => {
   const { user, isLoggedIn, logout, updateProfile } = useAuth();
+  const { showToast } = useNotification();
   const { totalItems } = useCart();
   const { wishlistCount } = useWishlist();
 
@@ -25,24 +27,42 @@ const AccountScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const cleanString = (str) => {
+    if (!str) return '';
+    return str.replace(/\+/g, ' ');
+  };
 
   useEffect(() => {
     if (user) {
-      setName(user.name || '');
+      setName(cleanString(user.name || ''));
       setPhone(user.phone || '');
-      setAddress(user.address || '');
+      setAddress(cleanString(user.address || ''));
     }
   }, [user]);
 
   const handleUpdate = async () => {
     setLoading(true);
-    const result = await updateProfile({ name, phone, address });
+    const result = await updateProfile({ 
+      name, 
+      phone, 
+      address,
+      old_password: oldPassword,
+      password: newPassword 
+    });
     setLoading(false);
+    
     if (result.success) {
-      Alert.alert('Thành công', 'Thông tin hồ sơ đã được cập nhật!');
+      showToast('Cập nhật thông tin thành công!');
+      setOldPassword('');
+      setNewPassword('');
     } else {
-      Alert.alert('Lỗi', result.message || 'Không thể cập nhật hồ sơ.');
+      showToast(result.message || 'Cập nhật thất bại.', 'error');
     }
   };
 
@@ -185,11 +205,39 @@ const AccountScreen = ({ navigation }) => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>MẬT KHẨU HIỆN TẠI</Text>
-              <TextInput style={styles.input} secureTextEntry placeholder="••••••••" />
+              <View style={styles.passwordInputWrapper}>
+                <TextInput 
+                  style={[styles.input, {flex: 1}]} 
+                  secureTextEntry={!showOldPassword} 
+                  placeholder="••••••••" 
+                  value={oldPassword}
+                  onChangeText={setOldPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon} 
+                  onPress={() => setShowOldPassword(!showOldPassword)}
+                >
+                  <Icon name={showOldPassword ? "eye" : "eye-slash"} size={16} color="#64748b" />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>MẬT KHẨU MỚI</Text>
-              <TextInput style={styles.input} secureTextEntry placeholder="••••••••" />
+              <View style={styles.passwordInputWrapper}>
+                <TextInput 
+                  style={[styles.input, {flex: 1}]} 
+                  secureTextEntry={!showNewPassword} 
+                  placeholder="••••••••" 
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon} 
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Icon name={showNewPassword ? "eye" : "eye-slash"} size={16} color="#64748b" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate} disabled={loading}>
@@ -251,6 +299,17 @@ const styles = StyleSheet.create({
     borderRadius: 12, height: 48, paddingHorizontal: 15, fontSize: 14, color: '#1e293b' 
   },
   inputDisabled: { backgroundColor: '#f8fafc', color: '#94a3b8' },
+  passwordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 15,
+    height: '100%',
+    justifyContent: 'center',
+  },
 
   saveBtn: {
     backgroundColor: '#0f172a', borderRadius: 50, height: 56,
@@ -261,7 +320,7 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
 
   // Guest State Elite
-  guestFullContainer: { flex: 1, backgroundColor: '#fff', marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : 0 },
+  guestFullContainer: { flex: 1, backgroundColor: '#fff' },
   guestMascotFull: { width: width, height: height },
   guestGradient: { 
     flex: 1, 

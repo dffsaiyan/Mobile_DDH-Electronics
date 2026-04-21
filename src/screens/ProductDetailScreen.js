@@ -11,6 +11,7 @@ import apiClient, { IMAGE_BASE_URL } from '../api/apiClient';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -43,6 +44,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { user } = useAuth();
+  const { showToast } = useNotification();
   const isAdmin = user?.is_admin == 1;
 
   useEffect(() => { 
@@ -82,12 +84,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
             comment: reviewMessage
         });
         if (response.data.success) {
-            Alert.alert('Thành công', 'Cảm ơn bạn đã gửi bình luận!');
+            showToast('Cảm ơn bạn đã gửi bình luận!');
             setReviewMessage('');
             fetchProductDetails();
         }
     } catch (error) {
-        Alert.alert('Lỗi', 'Bạn cần đăng nhập để thực hiện chức năng này.');
+        showToast('Bạn cần đăng nhập để thực hiện chức năng này.', 'error');
     }
   };
 
@@ -411,7 +413,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <Icon name="shopping-bag" size={14} color={Colors.white} style={{ marginRight: 8 }} />
           <Text style={styles.buyNowText}>MUA NGAY</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.addCartBtn} onPress={() => { addToCart(product, quantity); Alert.alert('Thành công', 'Đã thêm vào giỏ hàng'); }}>
+        <TouchableOpacity style={styles.addCartBtn} onPress={() => { addToCart(product, quantity); showToast(`Đã thêm ${product.name} vào giỏ hàng!`); }}>
           <Icon name="cart-plus" size={18} color={Colors.primary} />
         </TouchableOpacity>
       </View>
