@@ -30,7 +30,7 @@ const WishlistScreen = ({ navigation }) => {
   const { wishlistItems, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
   const { user, logout } = useAuth();
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
 
   const handleAddToCart = (item) => {
     addToCart({ ...item, sale_price: Number(item.sale_price) > 0 ? item.sale_price : item.price });
@@ -39,10 +39,13 @@ const WishlistScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Xác nhận đăng xuất', 'Bạn có chắc chắn muốn thoát?', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-    ]);
+    showConfirm({
+      title: 'Xác nhận đăng xuất',
+      message: 'Bạn có chắc chắn muốn thoát?',
+      confirmText: 'Đăng xuất',
+      type: 'logout',
+      onConfirm: logout
+    });
   };
 
   const renderHeader = () => (

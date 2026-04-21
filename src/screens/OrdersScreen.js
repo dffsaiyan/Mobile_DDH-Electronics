@@ -85,7 +85,7 @@ const OrderCard = ({ order, onPress }) => {
 
 const OrdersScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -120,17 +120,16 @@ const OrdersScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Xác nhận thoát', 'Bạn có chắc chắn muốn đăng xuất tài khoản DDH Elite?', [
-      { text: 'Hủy', style: 'cancel' },
-      { 
-        text: 'Đăng xuất', 
-        style: 'destructive', 
-        onPress: () => {
-          logout();
-          showToast('Đã đăng xuất thành công!', 'info');
-        } 
-      },
-    ]);
+    showConfirm({
+      title: 'Xác nhận thoát',
+      message: 'Bạn có chắc chắn muốn đăng xuất tài khoản DDH Elite?',
+      confirmText: 'Đăng xuất',
+      type: 'logout',
+      onConfirm: () => {
+        logout();
+        showToast('Đã đăng xuất thành công!', 'info');
+      }
+    });
   };
 
   const renderHeader = () => (

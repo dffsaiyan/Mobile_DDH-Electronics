@@ -43,7 +43,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
   const { order: initialOrder } = route.params;
   const [order, setOrder] = useState(initialOrder);
   const [loading, setLoading] = useState(true);
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
 
   useEffect(() => {
     fetchOrderDetail();
@@ -64,24 +64,23 @@ const OrderDetailScreen = ({ route, navigation }) => {
   };
 
   const handleCancelOrder = () => {
-    Alert.alert('Xác nhận hủy đơn', 'Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này không thể hoàn tác.', [
-      { text: 'Quay lại', style: 'cancel' },
-      {
-        text: 'Đúng, hủy đơn',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const response = await apiClient.post(`/v1/orders/${order.id}/cancel`);
-            if (response.data.success) {
-              showToast('Đơn hàng đã được hủy thành công.', 'info');
-              navigation.goBack();
-            }
-          } catch (error) {
-            showToast('Không thể hủy đơn hàng vào lúc này.', 'error');
+    showConfirm({
+      title: 'Xác nhận hủy đơn',
+      message: 'Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này không thể hoàn tác.',
+      confirmText: 'Đúng, hủy đơn',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const response = await apiClient.post(`/v1/orders/${order.id}/cancel`);
+          if (response.data.success) {
+            showToast('Đơn hàng đã được hủy thành công.', 'info');
+            navigation.goBack();
           }
+        } catch (error) {
+          showToast('Không thể hủy đơn hàng vào lúc này.', 'error');
         }
       }
-    ]);
+    });
   };
 
   const status = STATUS_MAP[order.status] || STATUS_MAP.pending;

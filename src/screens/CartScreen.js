@@ -98,24 +98,19 @@ const CartItem = ({ item, onIncrease, onDecrease, onRemove }) => (
 
 const CartScreen = ({ navigation }) => {
   const { cartItems, totalItems, totalPrice, increaseQuantity, decreaseQuantity, removeFromCart, clearCart } = useCart();
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
 
   const handleClearCart = () => {
-    Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc chắn muốn làm trống giỏ hàng?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Làm trống', 
-          style: 'destructive', 
-          onPress: () => {
-            clearCart();
-            showToast('Giỏ hàng đã được làm trống!', 'info');
-          } 
-        }
-      ]
-    );
+    showConfirm({
+      title: 'Làm trống giỏ hàng?',
+      message: 'Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng không?',
+      confirmText: 'Làm trống',
+      type: 'danger',
+      onConfirm: () => {
+        clearCart();
+        showToast('Giỏ hàng đã được làm trống!', 'info');
+      }
+    });
   };
 
   if (cartItems.length === 0) {

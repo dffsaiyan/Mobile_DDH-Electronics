@@ -22,7 +22,7 @@ const ReviewScreen = ({ route, navigation }) => {
       const response = await apiClient.post('/v1/reviews', {
         product_id: product.id,
         rating,
-        comment,
+        message: comment,
       });
       if (response.data.success) {
         showToast('Cảm ơn bạn đã để lại đánh giá tuyệt vời!', 'success');

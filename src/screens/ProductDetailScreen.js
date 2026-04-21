@@ -41,6 +41,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [reviewMessage, setReviewMessage] = useState('');
   const [replyMessages, setReplyMessages] = useState({});
+  const [activeTab, setActiveTab] = useState('ratings'); // 'ratings' or 'comments'
   
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -83,7 +84,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     try {
         const response = await apiClient.post('/v1/reviews', {
             product_id: product.id,
-            rating: 5,
+            rating: null,
             message: reviewMessage
         });
         if (response.data.success) {
@@ -126,6 +127,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const organizedReviews = organizeReviews();
+  const filteredReviews = organizedReviews.filter(r => 
+    activeTab === 'ratings' ? (r.rating && r.rating > 0) : (!r.rating || r.rating === 0)
+  );
+
   const hasDiscount = product.is_flash_sale && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.price);
   const discountPercent = hasDiscount ? Math.round(((Number(product.price) - Number(product.sale_price)) / Number(product.price)) * 100) : 0;
   const savings = hasDiscount ? product.price - product.sale_price : 0;
@@ -332,7 +337,20 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
             {/* Comment Form */}
             <View style={styles.commentFormCard}>
-                <Text style={styles.commentFormTitle}><Icon name="pen-nib" size={12} color={Colors.primary} /> Hỏi đáp về sản phẩm</Text>
+                <View style={styles.formHeaderRow}>
+                    <Text style={styles.commentFormTitle}>
+                        <Icon name="pen-nib" size={12} color={Colors.primary} /> 
+                        {product.can_review ? ' Đánh giá sản phẩm' : ' Hỏi đáp về sản phẩm'}
+                    </Text>
+                    {product.can_review && (
+                        <TouchableOpacity 
+                            style={styles.rateNowBtn} 
+                            onPress={() => navigation.navigate('Review', { product: product })}
+                        >
+                            <Text style={styles.rateNowText}>CHẤM SAO NGAY</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <TextInput 
                     style={styles.commentInput} 
                     placeholder="Nhập câu hỏi hoặc bình luận của bạn..." 
@@ -346,9 +364,29 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
             </View>
             
+            {/* Review Tabs */}
+            <View style={styles.reviewTabsContainer}>
+                <TouchableOpacity 
+                    style={[styles.reviewTab, activeTab === 'ratings' && styles.activeReviewTab]} 
+                    onPress={() => setActiveTab('ratings')}
+                >
+                    <Text style={[styles.reviewTabText, activeTab === 'ratings' && styles.activeReviewTabText]}>
+                        Đánh giá ({organizedReviews.filter(r => r.rating && r.rating > 0).length})
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.reviewTab, activeTab === 'comments' && styles.activeReviewTab]} 
+                    onPress={() => setActiveTab('comments')}
+                >
+                    <Text style={[styles.reviewTabText, activeTab === 'comments' && styles.activeReviewTabText]}>
+                        Hỏi đáp ({organizedReviews.filter(r => !r.rating || r.rating === 0).length})
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             <View style={styles.reviewList}>
-              {organizedReviews.length > 0 ? (
-                  organizedReviews.map(rev => (
+              {filteredReviews.length > 0 ? (
+                  filteredReviews.map(rev => (
                     <View key={rev.id} style={styles.reviewWrapper}>
                         {/* Parent Comment */}
                         <View style={styles.reviewItem}>
@@ -358,7 +396,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.reviewerNameRow}>
-                                        <Text style={styles.reviewerName}>{(rev.user?.name || 'Khách hàng').replace(/\+/g, ' ')}</Text>
+                                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                                            <Text style={styles.reviewerName}>{(rev.user?.name || 'Khách hàng').replace(/\+/g, ' ')}</Text>
+                                            {rev.rating > 0 && (
+                                                <View style={{flexDirection: 'row', gap: 2}}>
+                                                    {[1,2,3,4,5].map(s => (
+                                                        <Icon key={s} name="star" size={8} color={s <= rev.rating ? Colors.secondary : '#e2e8f0'} solid />
+                                                    ))}
+                                                </View>
+                                            )}
+                                        </View>
                                         <Text style={styles.reviewTime}>{new Date(rev.created_at).toLocaleDateString('vi-VN')}</Text>
                                     </View>
                                     <Text style={styles.reviewContent}>{rev.comment || rev.message}</Text>
@@ -409,7 +456,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                   ))
               ) : (
                 <View style={styles.emptyReviews}>
-                    <Text style={styles.emptyDataText}>Chưa có bình luận nào cho sản phẩm này.</Text>
+                    <Text style={styles.emptyDataText}>Chưa có {activeTab === 'ratings' ? 'đánh giá' : 'câu hỏi'} nào cho sản phẩm này.</Text>
                 </View>
               )}
             </View>
@@ -525,8 +572,16 @@ const styles = StyleSheet.create({
   faqAnswer: { fontSize: 12, color: '#64748b', lineHeight: 18 },
 
   reviewSection: { marginBottom: 30 },
+  reviewTabsContainer: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  reviewTab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, backgroundColor: '#f1f5f9' },
+  activeReviewTab: { backgroundColor: Colors.secondary },
+  reviewTabText: { fontSize: 12, fontWeight: '800', color: Colors.muted },
+  activeReviewTabText: { color: Colors.white },
   commentFormCard: { backgroundColor: '#f8fafc', padding: 20, borderRadius: 24, marginBottom: 20, borderWidth: 1, borderColor: '#f1f5f9' },
-  commentFormTitle: { fontSize: 14, fontWeight: '900', color: Colors.primary, marginBottom: 15 },
+  formHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  commentFormTitle: { fontSize: 14, fontWeight: '900', color: Colors.primary },
+  rateNowBtn: { backgroundColor: Colors.secondary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  rateNowText: { fontSize: 10, fontWeight: '900', color: Colors.white, letterSpacing: 0.5 },
   commentInput: { backgroundColor: Colors.white, borderRadius: 16, padding: 15, height: 100, textAlignVertical: 'top', fontSize: 13, color: Colors.primary, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 15 },
   commentSubmitBtn: { backgroundColor: Colors.primary, height: 44, borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   commentSubmitText: { color: Colors.white, fontSize: 13, fontWeight: '800' },

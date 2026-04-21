@@ -19,7 +19,7 @@ const { height, width } = Dimensions.get('window');
 
 const AccountScreen = ({ navigation }) => {
   const { user, isLoggedIn, logout, updateProfile } = useAuth();
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
   const { totalItems } = useCart();
   const { wishlistCount } = useWishlist();
 
@@ -67,10 +67,13 @@ const AccountScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Xác nhận đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi phiên làm việc này?', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-    ]);
+    showConfirm({
+      title: 'Xác nhận đăng xuất',
+      message: 'Bạn có chắc chắn muốn thoát khỏi phiên làm việc này?',
+      confirmText: 'Đăng xuất',
+      type: 'logout',
+      onConfirm: logout
+    });
   };
 
   if (!isLoggedIn) {
