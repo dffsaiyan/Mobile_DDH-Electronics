@@ -133,15 +133,15 @@ const AccountScreen = ({ navigation }) => {
 
           {/* 📋 MENU ITEMS (GRID FOR MOBILE) */}
           <View style={styles.menuGrid}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('ProfileEdit')}>
               <Icon name="user-circle" size={18} color="#1e293b" />
               <Text style={styles.menuLabel}>Hồ sơ</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Wishlist')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Wishlist')}>
               <Icon name="heart" size={18} color="#1e293b" />
               <Text style={styles.menuLabel}>Yêu thích</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Orders')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Orders')}>
               <Icon name="shopping-bag" size={18} color="#1e293b" />
               <Text style={styles.menuLabel}>Đơn hàng</Text>
             </TouchableOpacity>

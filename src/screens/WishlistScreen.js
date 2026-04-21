@@ -64,7 +64,7 @@ const WishlistScreen = ({ navigation }) => {
 
       {/* 📋 MENU GRID (HORIZONTAL) */}
       <View style={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('ProfileEdit')}>
           <Icon name="user-circle" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Hồ sơ</Text>
         </TouchableOpacity>
@@ -72,7 +72,7 @@ const WishlistScreen = ({ navigation }) => {
           <Icon name="heart" size={16} color="#fff" />
           <Text style={[styles.menuLabel, {color: '#fff'}]}>Yêu thích</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Orders')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Orders')}>
           <Icon name="shopping-bag" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Đơn hàng</Text>
         </TouchableOpacity>

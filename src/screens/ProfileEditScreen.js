@@ -54,7 +54,7 @@ const ProfileEditScreen = ({ navigation }) => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
-            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Account')} 
+            onPress={() => navigation.goBack()} 
             style={styles.backBtn}
           >
             <Icon name="arrow-left" size={16} color={Colors.primary} />

@@ -152,11 +152,11 @@ const OrdersScreen = ({ navigation }) => {
 
       {/* 📋 MENU GRID */}
       <View style={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('ProfileEdit')}>
           <Icon name="user-circle" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Hồ sơ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Wishlist')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.push('Wishlist')}>
           <Icon name="heart" size={16} color="#475569" />
           <Text style={styles.menuLabel}>Yêu thích</Text>
         </TouchableOpacity>
