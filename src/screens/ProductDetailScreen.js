@@ -40,6 +40,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [activeImage, setActiveImage] = useState(initialProduct.image);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [reviewMessage, setReviewMessage] = useState('');
+  const [replyMessages, setReplyMessages] = useState({});
   
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -69,7 +70,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
         params: { category_id: initialProduct.category_id, limit: 4 }
       });
       if (response.data.success) {
-        setRelatedProducts(response.data.data.data.filter(p => p.id !== initialProduct.id).slice(0, 4));
+        let list = response.data.data.data.filter(p => p.id !== initialProduct.id);
+        // Shuffle the list
+        list = list.sort(() => Math.random() - 0.5);
+        setRelatedProducts(list.slice(0, 4));
       }
     } catch (error) { console.error(error); }
   };
@@ -80,8 +84,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
         const response = await apiClient.post('/v1/reviews', {
             product_id: product.id,
             rating: 5,
-            message: reviewMessage,
-            comment: reviewMessage
+            message: reviewMessage
         });
         if (response.data.success) {
             showToast('Cảm ơn bạn đã gửi bình luận!');
@@ -90,6 +93,25 @@ const ProductDetailScreen = ({ route, navigation }) => {
         }
     } catch (error) {
         showToast('Bạn cần đăng nhập để thực hiện chức năng này.', 'error');
+    }
+  };
+
+  const submitReply = async (reviewId) => {
+    const msg = replyMessages[reviewId];
+    if (!msg || !msg.trim()) return;
+    try {
+        const response = await apiClient.post(`/v1/reviews`, {
+            product_id: product.id,
+            message: msg,
+            parent_id: reviewId
+        });
+        if (response.data.success) {
+            showToast('Đã gửi phản hồi thành công!');
+            setReplyMessages(prev => ({ ...prev, [reviewId]: '' }));
+            fetchProductDetails();
+        }
+    } catch (error) {
+        showToast('Lỗi khi gửi phản hồi.', 'error');
     }
   };
 
@@ -108,8 +130,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const discountPercent = hasDiscount ? Math.round(((product.price - product.sale_price) / product.price) * 100) : 0;
   const savings = hasDiscount ? product.price - product.sale_price : 0;
   
-  const avgRating = product.reviews?.length > 0 
-    ? (product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length).toFixed(1)
+  const ratedReviews = product.reviews?.filter(r => r.rating && r.rating > 0) || [];
+  const avgRating = ratedReviews.length > 0 
+    ? (ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length).toFixed(1)
     : "5.0";
 
   const renderAvatar = (u, size = 44) => {
@@ -172,10 +195,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
             {product.images?.map((imgObj, idx) => (
               <TouchableOpacity 
                 key={idx} 
-                style={[styles.thumbItem, activeImage === imgObj.image_path && styles.thumbActive]} 
-                onPress={() => setActiveImage(imgObj.image_path)}
+                style={[styles.thumbItem, activeImage === imgObj.image && styles.thumbActive]} 
+                onPress={() => setActiveImage(imgObj.image)}
               >
-                <Image source={{ uri: getImageUrl(imgObj.image_path) }} style={styles.thumbImg} />
+                <Image source={{ uri: getImageUrl(imgObj.image) }} style={styles.thumbImg} />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -273,11 +296,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
               <Text style={styles.sectionTitle}>Câu hỏi thường gặp</Text>
             </View>
             <View style={styles.faqList}>
-                {product.faqs && product.faqs.length > 0 ? (
-                    product.faqs.map((faq, idx) => (
+                {product.faqs && Object.keys(product.faqs).length > 0 ? (
+                    Object.entries(product.faqs).map(([q, a], idx) => (
                         <View key={idx} style={styles.faqItem}>
-                            <Text style={styles.faqQuestion}>Q: {faq.question}</Text>
-                            <Text style={styles.faqAnswer}>{faq.answer}</Text>
+                            <Text style={styles.faqQuestion}>Q: {q}</Text>
+                            <Text style={styles.faqAnswer}>{a}</Text>
                         </View>
                     ))
                 ) : (
@@ -291,6 +314,20 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <View style={styles.sectionTitleRow}>
               <View style={styles.sectionAccent} />
               <Text style={styles.sectionTitle}>Bình luận & Đánh giá ({product.reviews?.length || 0})</Text>
+            </View>
+
+            {/* Rating Widget (Moved up) */}
+            <View style={styles.ratingWidget}>
+                <Text style={styles.ratingTitle}>Đánh giá trung bình</Text>
+                <View style={styles.ratingCenter}>
+                    <Text style={styles.ratingValue}>{avgRating}</Text>
+                    <View style={styles.starsRow}>
+                        {[1,2,3,4,5].map(s => (
+                            <Icon key={s} name="star" size={16} color={s <= Math.round(avgRating) ? "#fbbf24" : "#e2e8f0"} solid />
+                        ))}
+                    </View>
+                    <Text style={styles.ratingCount}>Dựa trên {ratedReviews.length} lượt đánh giá thực tế</Text>
+                </View>
             </View>
 
             {/* Comment Form */}
@@ -321,17 +358,28 @@ const ProductDetailScreen = ({ route, navigation }) => {
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.reviewerNameRow}>
-                                        <Text style={styles.reviewerName}>{rev.user?.name || 'Khách hàng'}</Text>
+                                        <Text style={styles.reviewerName}>{(rev.user?.name || 'Khách hàng').replace(/\+/g, ' ')}</Text>
                                         <Text style={styles.reviewTime}>{new Date(rev.created_at).toLocaleDateString('vi-VN')}</Text>
                                     </View>
                                     <Text style={styles.reviewContent}>{rev.comment || rev.message}</Text>
                                     
-                                    {/* ADMIN ONLY REPLY BUTTON */}
+                                    {/* ADMIN ONLY REPLY PILL INPUT */}
                                     {isAdmin && (
-                                        <TouchableOpacity style={styles.replyBtn}>
-                                            <Icon name="reply" size={10} color={Colors.secondary} />
-                                            <Text style={styles.replyBtnText}>Trả lời</Text>
-                                        </TouchableOpacity>
+                                        <View style={styles.replyInputGroup}>
+                                            <TextInput 
+                                                style={styles.replyInput} 
+                                                placeholder="Nhập phản hồi của bạn..." 
+                                                placeholderTextColor="#94a3b8"
+                                                value={replyMessages[rev.id] || ''}
+                                                onChangeText={(txt) => setReplyMessages(prev => ({ ...prev, [rev.id]: txt }))}
+                                            />
+                                            <TouchableOpacity 
+                                                style={styles.replySubmitBtn} 
+                                                onPress={() => submitReply(rev.id)}
+                                            >
+                                                <Text style={styles.replySubmitText}>Gửi</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     )}
                                 </View>
                             </View>
@@ -347,7 +395,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                                         </View>
                                         <View style={styles.replyContentBox}>
                                             <View style={styles.reviewerNameRow}>
-                                                <Text style={styles.reviewerNameSmall}>{reply.user?.name || 'Admin'}</Text>
+                                                <Text style={styles.reviewerNameSmall}>{(reply.user?.name || 'Admin').replace(/\+/g, ' ')}</Text>
                                                 {reply.user?.is_admin === 1 && <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>Admin</Text></View>}
                                                 <Text style={styles.reviewTime}>{new Date(reply.created_at).toLocaleDateString('vi-VN')}</Text>
                                             </View>
@@ -365,21 +413,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                 </View>
               )}
             </View>
-
-            {/* Rating Widget */}
-            <View style={styles.ratingWidget}>
-                <Text style={styles.ratingTitle}>Đánh giá trung bình</Text>
-                <Text style={styles.ratingValue}>{avgRating}</Text>
-                <View style={styles.starsRow}>
-                    {[1,2,3,4,5].map(s => (
-                        <Icon key={s} name="star" size={16} color={s <= Math.round(avgRating) ? "#fbbf24" : "#e2e8f0"} solid />
-                    ))}
-                </View>
-                <Text style={styles.ratingCount}>Dựa trên {product.reviews?.length || 0} lượt đánh giá thực tế</Text>
-            </View>
           </View>
-
-          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <View style={styles.relatedSection}>
                 <View style={styles.sectionTitleRow}>
@@ -507,8 +541,10 @@ const styles = StyleSheet.create({
   reviewerName: { fontSize: 13, fontWeight: '800', color: Colors.dark },
   reviewTime: { fontSize: 10, color: Colors.muted },
   reviewContent: { fontSize: 13, color: '#334155', lineHeight: 20, marginBottom: 8 },
-  replyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  replyBtnText: { fontSize: 11, fontWeight: '800', color: Colors.primary },
+  replyInputGroup: { flexDirection: 'row', alignItems: 'center', marginTop: 10, borderRadius: 25, backgroundColor: '#f1f5f9', overflow: 'hidden', height: 38, borderWidth: 1, borderColor: '#e2e8f0' },
+  replyInput: { flex: 1, height: '100%', paddingHorizontal: 15, fontSize: 12, color: Colors.primary, fontWeight: '600' },
+  replySubmitBtn: { backgroundColor: Colors.primary, height: '100%', paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' },
+  replySubmitText: { color: Colors.white, fontSize: 11, fontWeight: '900' },
 
   repliesContainer: { marginTop: 15, marginLeft: 50, borderLeftWidth: 2, borderLeftColor: '#f1f5f9', paddingLeft: 15 },
   replyItem: { flexDirection: 'row', gap: 10, marginBottom: 15 },
@@ -520,11 +556,12 @@ const styles = StyleSheet.create({
   adminBadge: { backgroundColor: Colors.secondary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   adminBadgeText: { color: Colors.white, fontSize: 9, fontWeight: '900' },
 
-  ratingWidget: { backgroundColor: Colors.white, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#f1f5f9', alignItems: 'center', marginTop: 10 },
-  ratingTitle: { fontSize: 14, fontWeight: '800', color: Colors.primary, marginBottom: 10 },
+  ratingWidget: { backgroundColor: Colors.white, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#f1f5f9', marginBottom: 25 },
+  ratingTitle: { fontSize: 15, fontWeight: '800', color: Colors.primary, marginBottom: 20 },
+  ratingCenter: { alignItems: 'center' },
   ratingValue: { fontSize: 48, fontWeight: '900', color: Colors.primary, marginBottom: 8 },
-  starsRow: { flexDirection: 'row', gap: 4, marginBottom: 10 },
-  ratingCount: { fontSize: 11, color: Colors.muted, fontWeight: '600' },
+  starsRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  ratingCount: { fontSize: 12, color: Colors.muted, fontWeight: '600' },
 
   relatedSection: { marginTop: 10 },
   relatedCard: { width: 160, backgroundColor: Colors.white, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: '#f1f5f9' },

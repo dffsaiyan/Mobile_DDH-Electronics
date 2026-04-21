@@ -21,9 +21,9 @@ const getImageUrl = (path) => {
 
 const ProfileEditScreen = ({ navigation }) => {
   const { user, updateProfile } = useAuth();
-  const [name, setName] = useState(user?.name || '');
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [address, setAddress] = useState(user?.address || '');
+  const [name, setName] = useState((user?.name || '').replace(/\+/g, ' '));
+  const [phone, setPhone] = useState((user?.phone || '').replace(/\+/g, ' '));
+  const [address, setAddress] = useState((user?.address || '').replace(/\+/g, ' '));
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {

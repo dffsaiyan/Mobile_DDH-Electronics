@@ -127,7 +127,7 @@ const AccountScreen = ({ navigation }) => {
                 <Icon name="camera" size={12} color="#fff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.userName}>{user?.name || 'Admin DDH'}</Text>
+            <Text style={styles.userName}>{(user?.name || 'Admin DDH').replace(/\+/g, ' ')}</Text>
             <Text style={styles.userRole}>Thành viên Elite</Text>
           </View>
 
