@@ -35,7 +35,7 @@ const CategoryChip = ({ item, isActive, onPress }) => (
     style={[styles.categoryChip, isActive && styles.categoryChipActive]}
     activeOpacity={0.7}
   >
-    <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
+    <Text style={[styles.categoryText, isActive && styles.categoryTextActive, item.is_flash && { color: item.is_flash && isActive ? '#fff' : '#ef4444' }]}>
       {item.name}
     </Text>
   </TouchableOpacity>
@@ -105,6 +105,18 @@ const ProductCard = ({ item }) => {
           )}
         </View>
 
+        {item.is_flash_sale && (
+          <View style={styles.stockRow}>
+            <View style={styles.stockTextRow}>
+              <Text style={styles.stockText}>Đã bán: <Text style={{fontWeight: '900'}}>{item.sold_count || 0}</Text></Text>
+              <Text style={styles.stockText}>Còn: <Text style={{fontWeight: '900'}}>{item.stock || 0}</Text></Text>
+            </View>
+            <View style={styles.stockBar}>
+              <View style={[styles.stockFill, { width: `${(Number(item.sold_count) || 0) / ((Number(item.sold_count) || 0) + (Number(item.stock) || 0)) * 100}%` }]} />
+            </View>
+          </View>
+        )}
+
         {/* Action Buttons */}
         <View style={styles.cardActions}>
           <View style={styles.cardActionRow}>
@@ -133,11 +145,13 @@ const ProductCard = ({ item }) => {
 const ProductListScreen = ({ route, navigation }) => {
   const initialCategoryId = route?.params?.categoryId || null;
   const initialSearch = route?.params?.search || '';
+  const initialFlashSale = route?.params?.flash_sale || 0;
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([{ id: null, name: 'Tất cả' }]);
   const [activeCategory, setActiveCategory] = useState(initialCategoryId);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [isFlashSale, setIsFlashSale] = useState(initialFlashSale);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -157,13 +171,21 @@ const ProductListScreen = ({ route, navigation }) => {
       if (match) {
         setActiveCategory(match.id);
         setSearchQuery('');
+        setIsFlashSale(0);
       } else {
         setSearchQuery(term);
         setActiveCategory(null);
+        setIsFlashSale(0);
       }
     }
     if (route?.params?.categoryId !== undefined) {
       setActiveCategory(route.params.categoryId);
+      setSearchQuery('');
+      setIsFlashSale(0);
+    }
+    if (route?.params?.flash_sale !== undefined) {
+      setIsFlashSale(route.params.flash_sale);
+      setActiveCategory(null);
       setSearchQuery('');
     }
   }, [route?.params, categories]);
@@ -177,13 +199,20 @@ const ProductListScreen = ({ route, navigation }) => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, isFlashSale]);
 
   const fetchCategories = async () => {
     try {
       const response = await apiClient.get('/v1/categories');
       if (response.data.success) {
-        const cats = [{ id: null, name: 'Tất cả' }, ...response.data.data];
+        let cats = [{ id: null, name: 'Tất cả' }];
+        
+        // Insert Flash Sale if active
+        if (response.data.is_flash_active) {
+          cats.push({ id: 'flash', name: 'Flash Sale 🔥', is_flash: true });
+        }
+
+        cats = [...cats, ...response.data.data];
         setCategories(cats);
         
         // If there's an initial search, try to match it with a category
@@ -203,22 +232,18 @@ const ProductListScreen = ({ route, navigation }) => {
   const fetchProducts = async (appPage = 1) => {
     setLoading(true);
     try {
-      const apiPage = Math.ceil(appPage / 2);
-      const isSecondHalf = appPage % 2 === 0;
-
       const response = await apiClient.get('/v1/products', {
         params: {
           category_id: activeCategory,
           search: searchQuery,
-          page: apiPage
+          flash_sale: isFlashSale,
+          page: appPage,
+          per_page: 6
         }
       });
 
       if (response.data.success) {
-        const allItems = response.data.data.data || [];
-        const slicedItems = isSecondHalf ? allItems.slice(6, 12) : allItems.slice(0, 6);
-        
-        setProducts(slicedItems);
+        setProducts(response.data.data.data || []);
         setTotal(response.data.data.total || 0);
       } else {
         setProducts([]);
@@ -319,8 +344,18 @@ const ProductListScreen = ({ route, navigation }) => {
             <CategoryChip
               key={cat.id ?? 'all'}
               item={cat}
-              isActive={activeCategory === cat.id}
-              onPress={setActiveCategory}
+              isActive={cat.id === 'flash' ? isFlashSale === 1 : (activeCategory === cat.id && isFlashSale === 0)}
+              onPress={(id) => {
+                if (id === 'flash') {
+                  setIsFlashSale(1);
+                  setActiveCategory(null);
+                  setSearchQuery('');
+                } else {
+                  setIsFlashSale(0);
+                  setActiveCategory(id);
+                  setSearchQuery('');
+                }
+              }}
             />
           ))}
         </ScrollView>
@@ -340,7 +375,7 @@ const ProductListScreen = ({ route, navigation }) => {
         <FlatList
           data={products}
           renderItem={({ item }) => (
-            <ProductCard item={item} onPress={(p) => navigation.navigate('ProductDetail', { product: p })} />
+            <ProductCard item={item} />
           )}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
@@ -390,7 +425,8 @@ const styles = StyleSheet.create({
   salePrice: { fontSize: 13, fontWeight: '900', color: Colors.primary },
   originalPrice: { fontSize: 10, color: Colors.muted, textDecorationLine: 'line-through' },
   
-  stockRow: { gap: 6 },
+  stockRow: { marginTop: 4, marginBottom: 8 },
+  stockTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   stockBar: { height: 6, backgroundColor: Colors.input, borderRadius: 3, overflow: 'hidden' },
   stockFill: { height: '100%', backgroundColor: Colors.secondary, borderRadius: 3 },
   stockText: { fontSize: 9, fontWeight: '700', color: Colors.muted },

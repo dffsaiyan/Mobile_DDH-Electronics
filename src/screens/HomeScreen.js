@@ -105,10 +105,13 @@ const HomeScreen = ({ navigation }) => {
 
   // 🏆 HARDCODED CATEGORIES (WEB SYNC)
   const eliteCategories = [
+    { id: 'cat-0', name: 'FLASH SALE', icon: 'images/icon/pngtree-3d-lightning-icon-flash-sale-listrik-petir-png-image_17854619.webp', is_flash: true },
     { id: 'cat-6', name: 'Lót chuột Gear', icon: 'images/icon/ai-gaming-mouse-pad-3d-icon-png-download-jpg-13387054.webp' },
     { id: 'cat-7', name: 'Keycaps & Switch', icon: 'images/icon/keycap-p-3d-icon-png-download-13964981.png' },
     { id: 'cat-8', name: 'Ghế công thái học', icon: 'images/icon/gaming-chair-3d-illustration-office-equipment-icon-png.png' },
   ];
+
+  const categoriesToShow = data?.is_flash_active ? eliteCategories : eliteCategories.filter(c => !c.is_flash);
 
   // ⚡ Flash Pulse Animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -124,7 +127,6 @@ const HomeScreen = ({ navigation }) => {
   useFocusEffect(useCallback(() => { fetchHomeData(); }, []));
 
   useEffect(() => {
-    // 🕒 Aggressive search for flash sale end time in the data object
     const findEndTime = (obj) => {
       if (!obj) return null;
       if (obj.flash_sale_end) return obj.flash_sale_end;
@@ -184,13 +186,12 @@ const HomeScreen = ({ navigation }) => {
         }
       };
 
-      updateTimer(); // Initial call
+      updateTimer();
       const timer = setInterval(updateTimer, 1000);
       return () => clearInterval(timer);
     }
   }, [data]);
 
-  // 🎡 AUTOPLAY SLIDER LOGIC
   useEffect(() => {
     if (data?.slides?.length > 0) {
       const interval = setInterval(() => {
@@ -199,12 +200,11 @@ const HomeScreen = ({ navigation }) => {
           sliderRef.current.scrollTo({ x: nextSlide * width, animated: true });
           setActiveSlide(nextSlide);
         }
-      }, 4000); // Auto scroll every 4 seconds
+      }, 4000);
       return () => clearInterval(interval);
     }
   }, [activeSlide, data?.slides]);
 
-  // LIVE SEARCH LOGIC
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
       setSearchResults([]);
@@ -238,13 +238,11 @@ const HomeScreen = ({ navigation }) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         let homeData = response.data.data;
         
-        // 🕒 Aggressive Search for End Time in the WHOLE response
         const findInObj = (obj) => {
           if (!obj || typeof obj !== 'object') return null;
           if (obj.flash_sale_end) return obj.flash_sale_end;
           if (obj.flashSaleEnd) return obj.flashSaleEnd;
           if (obj.end_time) return obj.end_time;
-          // Recursively check if it's an object or array
           for (let key in obj) {
             if (typeof obj[key] === 'object') {
               const found = findInObj(obj[key]);
@@ -257,7 +255,6 @@ const HomeScreen = ({ navigation }) => {
         const detectedEndTime = findInObj(response.data);
         if (detectedEndTime) homeData.flash_sale_end = detectedEndTime;
 
-        // 🛠️ SMART FALLBACK: If flash_sale is empty, try to find flash products in 'popular'
         const flashItems = homeData.flash_sale || homeData.flashSale || [];
         if (flashItems.length === 0 && homeData.popular) {
           const extractedFlash = homeData.popular.filter(p => p.is_flash_sale);
@@ -301,7 +298,6 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <TopMarquee />
 
-      {/* 🌫️ DISMISS OVERLAY */}
       {showResults && <Pressable style={styles.overlay} onPress={closeSearch} />}
 
       <View style={styles.header}>
@@ -329,7 +325,6 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* 🚀 LIVE SEARCH RESULTS OVERLAY */}
         {showResults && (
           <View style={styles.liveSearchResults}>
             {searchResults.length > 0 ? (
@@ -357,7 +352,6 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {setRefreshing(true); fetchHomeData();}} colors={[Colors.secondary]} />}>
-        {/* ── SLIDER ── */}
         <View style={styles.sliderContainer}>
           <ScrollView ref={sliderRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setActiveSlide(Math.round(e.nativeEvent.contentOffset.x / width))}>
             {data?.slides?.map(slide => (
@@ -367,7 +361,6 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.dotRow}>{data?.slides?.map((_, i) => (<View key={i} style={[styles.dot, activeSlide === i && styles.dotActive]} />))}</View>
         </View>
 
-        {/* ── BANNERS ── */}
         <View style={styles.bannerRow}>
           {data?.banners?.slice(0, 3).map((bn, idx) => (
             <TouchableOpacity key={idx} style={styles.bannerItem} activeOpacity={0.9}>
@@ -376,7 +369,6 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* ── FULL BANNER ── */}
         <TouchableOpacity style={styles.fullBannerContainer} activeOpacity={0.9}>
           <Image source={{ uri: `${IMAGE_BASE_URL}/images/banner_ngang1.jpg` }} style={styles.fullBannerImg} resizeMode="stretch" />
         </TouchableOpacity>
@@ -402,11 +394,18 @@ const HomeScreen = ({ navigation }) => {
           
           {isCategoryExpanded && (
             <View style={styles.eliteCategoryContent}>
-                {eliteCategories.map((cat, idx) => (
+                {categoriesToShow.map((cat, idx) => (
                     <TouchableOpacity 
                         key={cat.id} 
-                        style={[styles.eliteCatItem, idx === eliteCategories.length - 1 && { borderBottomWidth: 0 }]} 
-                        onPress={() => navigation.navigate('ProductList', { search: cat.name })}
+                        style={[styles.eliteCatItem, idx === categoriesToShow.length - 1 && { borderBottomWidth: 0 }]} 
+                        onPress={() => {
+                            toggleCategory();
+                            if (cat.is_flash) {
+                                navigation.navigate('ProductList', { flash_sale: 1 });
+                            } else {
+                                navigation.navigate('ProductList', { search: cat.name });
+                            }
+                        }}
                     >
                         <View style={styles.eliteCatLeft}>
                         <View style={styles.eliteCatIconBox}>
@@ -420,12 +419,10 @@ const HomeScreen = ({ navigation }) => {
             </View>
           )}
         </View>
-        
 
         {/* ── FLASH SALE ── */}
-        {(data?.flash_sale?.length > 0 || data?.flashSale?.length > 0) && (
+        {data?.is_flash_active && (data?.flash_sale?.length > 0 || data?.flashSale?.length > 0) && (
           <View style={styles.flashSaleContainerElite}>
-            {/* Decorative Gifts */}
             <Icon name="gift" size={16} color="#ef4444" style={[styles.giftDeco, { left: 20 }]} />
             <Icon name="gift" size={16} color="#ef4444" style={[styles.giftDeco, { right: 20 }]} />
 
@@ -461,11 +458,12 @@ const HomeScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.flashContentElite}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.flashHScroll}>
-                {(data?.flash_sale || data?.flashSale).map(item => {
-                  const soldCount = item.sold_count || 6;
-                  const totalCount = (item.stock || 41);
-                  const progress = (soldCount / totalCount) * 100;
+              <View style={styles.flashGridElite}>
+                {(data?.flash_sale || data?.flashSale).slice(0, 2).map(item => {
+                  const soldCount = Number(item.sold_count) || 0;
+                  const stockLeft = Number(item.stock) || 0;
+                  const totalCount = soldCount + stockLeft;
+                  const progress = totalCount > 0 ? (soldCount / totalCount) * 100 : 0;
                   
                   return (
                     <TouchableOpacity key={item.id} style={styles.flashCardElite} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
@@ -483,58 +481,37 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.flashNameElite} numberOfLines={1}>{item.name}</Text>
                         
                         <View style={styles.flashPriceRowElite}>
-                          <Text 
-                            style={styles.flashSalePriceElite} 
-                            numberOfLines={1} 
-                            adjustsFontSizeToFit
-                          >
+                          <Text style={styles.flashSalePriceElite} numberOfLines={1} adjustsFontSizeToFit>
                             {formatPrice(item.is_flash_sale && Number(item.sale_price) > 0 ? item.sale_price : item.price)}
                           </Text>
-                          {item.is_flash_sale && Number(item.sale_price) > 0 && (
-                            <Text style={styles.flashOldPriceElite} numberOfLines={1}>{formatPrice(item.price)}</Text>
-                          )}
                         </View>
 
-                        {/* Stock Progress */}
                         <View style={styles.stockInfoElite}>
                           <View style={styles.stockTextRow}>
                             <Text style={styles.stockLabel}>Đã bán: <Text style={{fontWeight: '900'}}>{soldCount}</Text></Text>
-                            <Text style={styles.stockLabel}>Còn: <Text style={{fontWeight: '900'}}>{totalCount - soldCount}</Text></Text>
+                            <Text style={styles.stockLabel}>Còn: <Text style={{fontWeight: '900'}}>{stockLeft}</Text></Text>
                           </View>
                           <View style={styles.stockBarContainer}>
                             <View style={[styles.stockBarFill, { width: `${progress}%` }]} />
                           </View>
                         </View>
 
-                        <View style={styles.cardActionsElite}>
-                          <View style={styles.actionRowElite}>
-                            <TouchableOpacity style={styles.btnSecondaryElite} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
-                              <Icon name="eye" size={12} color="#475569" />
-                              <Text style={styles.btnSecTextElite}>Chi tiết</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.btnSecondaryElite} onPress={() => handleAddToCart(item)}>
-                              <Icon name="cart-plus" size={12} color="#475569" />
-                              <Text style={styles.btnSecTextElite}>+ Giỏ</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <TouchableOpacity 
-                            style={styles.btnFlashBuy} 
-                            onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
-                          >
-                            <Icon name="bolt" size={12} color="#fff" />
-                            <Text style={styles.btnBuyTextElite}>Mua Ngay</Text>
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity 
+                          style={styles.btnFlashBuy} 
+                          onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
+                        >
+                          <Icon name="bolt" size={12} color="#fff" />
+                          <Text style={styles.btnBuyTextElite}>Mua Ngay</Text>
+                        </TouchableOpacity>
                       </View>
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
             </View>
           </View>
         )}
 
-        {/* ── POPULAR GEAR ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View><Text style={styles.sectionTitle}>SẢN PHẨM PHỔ BIẾN</Text><Text style={styles.sectionSubtitle}>Top Trending Gear</Text></View>
@@ -559,7 +536,6 @@ const HomeScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Action Buttons */}
                 <View style={[styles.cardActions, { marginTop: 10 }]}>
                   <View style={styles.cardActionRow}>
                     <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
@@ -603,8 +579,6 @@ const styles = StyleSheet.create({
   searchInputElite: { flex: 1, fontSize: 12, fontWeight: '600', color: Colors.primary },
   heartBtnElite: { width: 44, height: 44, borderRadius: 20, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
   heartBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.secondary, borderWidth: 1.5, borderColor: Colors.white },
-  
-  // LIVE SEARCH STYLES
   liveSearchResults: { position: 'absolute', top: 60, left: Spacing.m, right: Spacing.m, backgroundColor: Colors.white, borderRadius: 20, padding: 10, elevation: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.15, shadowRadius: 25, borderWidth: 1, borderColor: '#f1f5f9' },
   liveSearchItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   liveSearchImg: { width: 40, height: 40, backgroundColor: '#f8fafc', borderRadius: 10 },
@@ -612,7 +586,6 @@ const styles = StyleSheet.create({
   liveSearchPrice: { fontSize: 11, fontWeight: '800', color: Colors.secondary },
   liveSearchEmpty: { padding: 20, alignItems: 'center' },
   liveSearchEmptyText: { fontSize: 12, color: Colors.muted, fontWeight: '600' },
-
   sliderContainer: { height: 180 },
   slideImage: { width: width, height: 180 },
   dotRow: { position: 'absolute', bottom: 15, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 6 },
@@ -623,8 +596,6 @@ const styles = StyleSheet.create({
   bannerImg: { width: '100%', height: '100%' },
   fullBannerContainer: { marginHorizontal: Spacing.m, marginBottom: Spacing.l, height: 90, borderRadius: 12, overflow: 'hidden' },
   fullBannerImg: { width: '100%', height: '100%' },
-
-  // 🏆 ELITE DROPDOWN MENU STYLES
   eliteCategoryCard: { marginHorizontal: Spacing.m, backgroundColor: Colors.white, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#f1f5f9', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, marginBottom: Spacing.xl },
   eliteCategoryHeader: { backgroundColor: '#0f172a', padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 3, borderBottomColor: Colors.accent },
   eliteCategoryHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -635,13 +606,11 @@ const styles = StyleSheet.create({
   eliteCatIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center' },
   eliteCatIconImg: { width: '80%', height: '80%' },
   eliteCatName: { fontSize: 14, fontWeight: '700', color: '#334155' },
-
   section: { paddingHorizontal: Spacing.m, marginBottom: Spacing.xl },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '900', color: Colors.primary },
   sectionSubtitle: { fontSize: 11, color: Colors.secondary, fontWeight: '700' },
   seeAll: { fontSize: 12, fontWeight: '700', color: Colors.secondary },
-  // ⚡ ELITE FLASH SALE STYLES
   flashSaleContainerElite: { backgroundColor: Colors.white, borderRadius: 24, marginHorizontal: Spacing.m, marginBottom: Spacing.xl, ...Shadow.medium, overflow: 'hidden', borderWidth: 1, borderColor: '#fee2e2' },
   giftDeco: { position: 'absolute', top: 15, opacity: 0.1 },
   flashHeaderElite: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#fee2e2' },
@@ -656,10 +625,9 @@ const styles = StyleSheet.create({
   timerBoxSec: { backgroundColor: '#ef4444', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   timerTextElite: { color: Colors.white, fontSize: 13, fontWeight: '900' },
   timerSepElite: { fontSize: 14, fontWeight: '900', color: '#1e293b' },
-  
   flashContentElite: { padding: 12 },
-  flashHScroll: { gap: 12 },
-  flashCardElite: { width: 180, backgroundColor: Colors.white, borderRadius: 20, padding: 10, borderWidth: 1, borderColor: '#f1f5f9' },
+  flashGridElite: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  flashCardElite: { flex: 1, backgroundColor: Colors.white, borderRadius: 20, padding: 10, borderWidth: 1, borderColor: '#f1f5f9' },
   badgeFlashElite: { position: 'absolute', top: 10, left: 10, backgroundColor: '#ef4444', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, zIndex: 10 },
   badgeFlashText: { color: Colors.white, fontSize: 8, fontWeight: '900' },
   flashImageBoxElite: { width: '100%', height: 140, backgroundColor: '#f8fafc', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
@@ -670,20 +638,17 @@ const styles = StyleSheet.create({
   flashPriceRowElite: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 10, minHeight: 35 },
   flashSalePriceElite: { fontSize: 14, fontWeight: '900', color: '#ef4444', flexShrink: 1 },
   flashOldPriceElite: { fontSize: 9, color: Colors.muted, textDecorationLine: 'line-through' },
-  
   stockInfoElite: { marginBottom: 12 },
   stockTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   stockLabel: { fontSize: 9, color: '#64748b' },
   stockBarContainer: { height: 6, backgroundColor: '#f1f5f9', borderRadius: 3, overflow: 'hidden' },
   stockBarFill: { height: '100%', backgroundColor: '#ef4444', borderRadius: 3 },
-  
   cardActionsElite: { gap: 6 },
   actionRowElite: { flexDirection: 'row', gap: 6 },
   btnSecondaryElite: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#f8fafc', height: 36, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
   btnSecTextElite: { fontSize: 10, fontWeight: '700', color: '#475569' },
   btnFlashBuy: { backgroundColor: '#ef4444', height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#ef4444', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
   btnBuyTextElite: { color: Colors.white, fontSize: 13, fontWeight: '900' },
-
   popularGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.m },
   popularCard: { width: CARD_W, backgroundColor: Colors.white, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: '#f1f5f9' },
   popImageBox: { width: '100%', height: CARD_W * 0.75, borderRadius: 16, backgroundColor: '#f8fafc', marginBottom: 12, justifyContent: 'center', alignItems: 'center' },
@@ -694,8 +659,6 @@ const styles = StyleSheet.create({
   popularPrice: { fontSize: 15, fontWeight: '900', color: Colors.primary },
   popOldPriceBox: { height: 16, justifyContent: 'center' },
   popularOldPrice: { fontSize: 10, color: Colors.muted, textDecorationLine: 'line-through' },
-
-  // Action Buttons
   cardActions: { marginTop: 12, gap: 8 },
   cardActionRow: { flexDirection: 'row', gap: 6 },
   btnSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
