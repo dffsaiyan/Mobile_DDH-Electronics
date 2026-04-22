@@ -53,9 +53,13 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.post('/v1/login', { email, password });
       if (response.data.success) {
         const { user: userData, token: authToken } = response.data;
+        
+        // ⚡ SET HEADER FIRST to avoid race conditions
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        
         setUser(userData);
         setToken(authToken);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        
         await AsyncStorage.setItem('auth_token', authToken);
         await AsyncStorage.setItem('auth_user', JSON.stringify(userData));
         return { success: true };
@@ -77,9 +81,13 @@ export const AuthProvider = ({ children }) => {
       });
       if (response.data.success) {
         const { user: userData, token: authToken } = response.data;
+        
+        // ⚡ SET HEADER FIRST
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        
         setUser(userData);
         setToken(authToken);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        
         await AsyncStorage.setItem('auth_token', authToken);
         await AsyncStorage.setItem('auth_user', JSON.stringify(userData));
         return { success: true };
@@ -106,11 +114,11 @@ export const AuthProvider = ({ children }) => {
 
   const socialLogin = async (userData, authToken) => {
     try {
+      // ⚡ SET HEADER FIRST
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      
       setUser(userData);
       setToken(authToken);
-      
-      // Force set Authorization header
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       
       await AsyncStorage.setItem('auth_token', authToken);
       await AsyncStorage.setItem('auth_user', JSON.stringify(userData));

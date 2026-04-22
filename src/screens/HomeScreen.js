@@ -103,15 +103,19 @@ const HomeScreen = ({ navigation }) => {
   // Dropdown States
   const [isCategoryExpanded, setIsCategoryExpanded] = useState(false);
 
-  // 🏆 HARDCODED CATEGORIES (WEB SYNC)
+  // 🏆 HARDCODED CATEGORIES (WEB SYNC) - All 8 Categories
   const eliteCategories = [
-    { id: 'cat-0', name: 'FLASH SALE', icon: 'images/icon/pngtree-3d-lightning-icon-flash-sale-listrik-petir-png-image_17854619.webp', is_flash: true },
+    { id: 'cat-1', name: 'Bàn phím cơ', icon: 'images/icon/vecteezy_ergonomic-mechanical-keyboard-with-custom-keycaps-for_60514914.png' },
+    { id: 'cat-2', name: 'Chuột Gaming', icon: 'images/icon/gaming-mouse-3d-icon-png-download-9675855.webp' },
+    { id: 'cat-3', name: 'Màn hình đồ họa', icon: 'images/icon/premium-computer-parts-display-monitor-icon-3d-rendering-isolated-background_150525-4565.png' },
+    { id: 'cat-4', name: 'Laptop Gaming', icon: 'images/icon/laptop-gaming-3d-icon-png-download-11431625.webp' },
+    { id: 'cat-5', name: 'Âm thanh & Loa', icon: 'images/icon/audio-icon-concept-with-3d-cartoon-style-headphone-and-blue-speaker-3d-illustration-png.png' },
     { id: 'cat-6', name: 'Lót chuột Gear', icon: 'images/icon/ai-gaming-mouse-pad-3d-icon-png-download-jpg-13387054.webp' },
     { id: 'cat-7', name: 'Keycaps & Switch', icon: 'images/icon/keycap-p-3d-icon-png-download-13964981.png' },
     { id: 'cat-8', name: 'Ghế công thái học', icon: 'images/icon/gaming-chair-3d-illustration-office-equipment-icon-png.png' },
   ];
 
-  const categoriesToShow = data?.is_flash_active ? eliteCategories : eliteCategories.filter(c => !c.is_flash);
+  const categoriesToShow = eliteCategories;
 
   // ⚡ Flash Pulse Animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -399,7 +403,6 @@ const HomeScreen = ({ navigation }) => {
                         key={cat.id} 
                         style={[styles.eliteCatItem, idx === categoriesToShow.length - 1 && { borderBottomWidth: 0 }]} 
                         onPress={() => {
-                            toggleCategory();
                             if (cat.is_flash) {
                                 navigation.navigate('ProductList', { flash_sale: 1 });
                             } else {

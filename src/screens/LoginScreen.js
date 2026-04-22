@@ -57,7 +57,7 @@ const LoginScreen = ({ navigation }) => {
         setStatus('success');
         setMessage('Đăng nhập thành công!');
         showToast('Đăng nhập thành công!');
-        setTimeout(() => navigation.navigate('HomeTabs'), 1000);
+        setTimeout(() => navigation.navigate('HomeTabs', { screen: 'Account' }), 1000);
       }
     } catch (error) {
       showToast('Có lỗi xảy ra, vui lòng thử lại.', 'error');
@@ -99,7 +99,7 @@ const LoginScreen = ({ navigation }) => {
 
         if (token && userData.name) {
           await socialLogin(userData, token);
-          navigation.navigate('HomeTabs');
+          navigation.navigate('HomeTabs', { screen: 'Account' });
         } else {
           setStatus('error');
           setMessage('Không thể lấy thông tin đăng nhập.');
@@ -130,7 +130,7 @@ const LoginScreen = ({ navigation }) => {
         if (response.data.success) {
           const { user, token } = response.data;
           await socialLogin(user, token);
-          navigation.navigate('HomeTabs');
+          navigation.navigate('HomeTabs', { screen: 'Account' });
         } else {
           setStatus('error');
           setMessage('Vui lòng thử lại đăng nhập.');

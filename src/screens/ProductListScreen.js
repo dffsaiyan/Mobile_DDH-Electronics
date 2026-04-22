@@ -29,14 +29,14 @@ import { FontAwesome5 as Icon } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 // 🏷️ CATEGORY CHIP COMPONENT
-const CategoryChip = ({ item, isActive, onPress }) => (
+const CategoryChip = ({ label, isActive, onPress, id, isFlash }) => (
   <TouchableOpacity
-    onPress={() => onPress(item.id)}
+    onPress={() => onPress(id)}
     style={[styles.categoryChip, isActive && styles.categoryChipActive]}
     activeOpacity={0.7}
   >
-    <Text style={[styles.categoryText, isActive && styles.categoryTextActive, item.is_flash && { color: item.is_flash && isActive ? '#fff' : '#ef4444' }]}>
-      {item.name}
+    <Text style={[styles.categoryText, isActive && styles.categoryTextActive, isFlash && { color: isActive ? '#fff' : '#ef4444' }]}>
+      {label}
     </Text>
   </TouchableOpacity>
 );
@@ -328,7 +328,13 @@ const ProductListScreen = ({ route, navigation }) => {
             placeholder="Tìm sản phẩm..."
             placeholderTextColor={Colors.muted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              if (text.length > 0) {
+                setActiveCategory(null);
+                setIsFlashSale(0);
+              }
+            }}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -339,12 +345,16 @@ const ProductListScreen = ({ route, navigation }) => {
       </View>
 
       <View style={styles.categoryContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+        <View style={styles.categoryGrid}>
           {categories.map((cat) => (
             <CategoryChip
               key={cat.id ?? 'all'}
-              item={cat}
-              isActive={cat.id === 'flash' ? isFlashSale === 1 : (activeCategory === cat.id && isFlashSale === 0)}
+              label={cat.name}
+              isActive={
+                (cat.id === null && activeCategory === null && isFlashSale === 0 && searchQuery === '') || 
+                (cat.id === activeCategory && isFlashSale === 0) ||
+                (cat.is_flash && isFlashSale === 1)
+              }
               onPress={(id) => {
                 if (id === 'flash') {
                   setIsFlashSale(1);
@@ -355,10 +365,13 @@ const ProductListScreen = ({ route, navigation }) => {
                   setActiveCategory(id);
                   setSearchQuery('');
                 }
+                setPage(1);
               }}
+              id={cat.is_flash ? 'flash' : cat.id}
+              isFlash={cat.is_flash}
             />
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {loading ? (
@@ -403,11 +416,11 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 16, marginRight: Spacing.s },
   searchInput: { flex: 1, fontSize: 13, fontWeight: '600', color: Colors.dark },
   clearIcon: { fontSize: 16, color: Colors.muted, paddingLeft: Spacing.s },
-  categoryContainer: { backgroundColor: Colors.white, paddingBottom: Spacing.m, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  categoryScroll: { paddingHorizontal: Spacing.m, gap: 8 },
-  categoryChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 50, backgroundColor: Colors.input, borderWidth: 1, borderColor: 'transparent' },
+  categoryContainer: { backgroundColor: Colors.white, paddingBottom: Spacing.m, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.03)' },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.m, gap: 6 },
+  categoryChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#f1f5f9', marginBottom: 4 },
   categoryChipActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
-  categoryText: { fontSize: 11, fontWeight: '700', color: Colors.muted },
+  categoryText: { fontSize: 10, fontWeight: '700', color: '#64748b' },
   categoryTextActive: { color: Colors.white },
   listContent: { padding: Spacing.m, paddingBottom: 120 },
   row: { justifyContent: 'space-between', marginBottom: Spacing.m },
