@@ -1,16 +1,16 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, StatusBar, Alert, ActivityIndicator, Image,
-  KeyboardAvoidingView, Platform
+  KeyboardAvoidingView, Platform, Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../styles/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
-import { IMAGE_BASE_URL, getUserAvatar } from '../api/apiClient';
+import apiClient, { IMAGE_BASE_URL, getUserAvatar } from '../api/apiClient';
 import { Modal, FlatList } from 'react-native';
 
 // 🛠️ HELPERS
@@ -30,15 +30,114 @@ const ProfileEditScreen = ({ navigation }) => {
   
   // Address Dropdown States
   const [showCityModal, setShowCityModal] = useState(false);
-  const CITIES = ['Hà Nội', 'TP. Hồ Chí Minh', 'Lạng Sơn', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ'];
+  const [showWardModal, setShowWardModal] = useState(false);
+
+  const [cities, setCities] = useState([]); // Array of { code: string, name: string }
+  const [wards, setWards] = useState([]);   // Array of { code: string, name: string }
   
   // Parse existing address
   const initialAddress = (user?.address || '').replace(/\+/g, ' ');
-  const addressParts = initialAddress.split(', ');
-  const [address, setAddress] = useState(addressParts.length > 1 ? addressParts[0] : initialAddress);
-  const [selectedCity, setSelectedCity] = useState(addressParts.length > 1 ? addressParts[1] : 'Lạng Sơn');
+  const addressParts = initialAddress.includes(', ') ? initialAddress.split(', ') : [initialAddress];
+  
+  // Logic: 
+  // If we have province_id/district_id from DB, use them.
+  // Otherwise, try to parse from the comma-separated string.
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCityCode, setSelectedCityCode] = useState(user?.province_id || '');
+  const [selectedWard, setSelectedWard] = useState(user?.district_id || '');
+  
+  const [address, setAddress] = useState(() => {
+    if (addressParts.length >= 3) {
+      return addressParts.slice(0, addressParts.length - 2).join(', ');
+    }
+    return initialAddress;
+  });
   
   const [loading, setLoading] = useState(false);
+
+  // Search states for Modals
+  const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [wardSearchQuery, setWardSearchQuery] = useState('');
+
+  const filteredCities = cities.filter(city => 
+    city.name.toLowerCase().includes(citySearchQuery.toLowerCase())
+  );
+
+  const filteredWards = wards.filter(ward => 
+    ward.name.toLowerCase().includes(wardSearchQuery.toLowerCase())
+  );
+
+  useEffect(() => {
+    fetchProvinces();
+  }, []);
+
+  const fetchProvinces = async () => {
+    try {
+      const response = await fetch('https://provinces.open-api.vn/api/v2/p/');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setCities(data); // Stores { code, name }
+      }
+    } catch (error) {
+      console.error('Error fetching provinces:', error);
+      setCities([{ code: '1', name: 'Hà Nội' }, { code: '79', name: 'TP. Hồ Chí Minh' }]);
+    }
+  };
+
+  // Resolve City Name from Code
+  useEffect(() => {
+    if (selectedCityCode && cities.length > 0) {
+      const found = cities.find(c => c.code == selectedCityCode);
+      if (found) setSelectedCity(found.name);
+    }
+  }, [selectedCityCode, cities]);
+
+  const fetchWards = async (pCode) => {
+    if (!pCode) return;
+    try {
+      const wResponse = await fetch(`https://provinces.open-api.vn/api/v2/w/?province=${pCode}`);
+      const wData = await wResponse.json();
+      const subdivisions = Array.isArray(wData) ? wData : (wData.wards || []);
+      setWards(subdivisions);
+    } catch (error) {
+      console.error('Error fetching wards:', error);
+    }
+  };
+
+  // 🔄 REAL-TIME SYNC: Fetch latest profile from server when entering screen
+  useEffect(() => {
+    const refreshProfile = async () => {
+      try {
+        await fetchProvinces(); // Load 63 provinces first
+        
+        const response = await apiClient.get('/v1/profile');
+        if (response.data.success) {
+          const u = response.data.user;
+          setName((u.name || '').replace(/\+/g, ' '));
+          setPhone((u.phone || '').replace(/\+/g, ' '));
+          setSelectedCityCode(u.province_id || '');
+          setSelectedWard(u.district_id || '');
+          
+          const rawAddr = (u.address || '').replace(/\+/g, ' ');
+          const parts = rawAddr.includes(', ') ? rawAddr.split(', ') : [rawAddr];
+          if (parts.length >= 3) {
+            setAddress(parts.slice(0, parts.length - 2).join(', '));
+          } else {
+            setAddress(rawAddr);
+          }
+        }
+      } catch (e) {
+        console.error('Refresh profile error:', e);
+      }
+    };
+    refreshProfile();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCityCode) {
+      fetchWards(selectedCityCode);
+    }
+  }, [selectedCityCode]);
 
   // Password States (Moved from Account)
   const [oldPassword, setOldPassword] = useState('');
@@ -52,12 +151,14 @@ const ProfileEditScreen = ({ navigation }) => {
       return;
     }
     setLoading(true);
-    // Combine full address
-    const fullAddress = `${address}, ${selectedCity}`;
+    // Combine full address: "Số nhà..., Phường..., Tỉnh..."
+    const fullAddress = `${address}, ${selectedWard}, ${selectedCity}`;
     const result = await updateProfile({ 
       name, 
       phone, 
       address: fullAddress,
+      province_id: selectedCityCode,
+      district_id: selectedWard, // district_id is used for Ward name on web
       old_password: oldPassword,
       password: newPassword
     });
@@ -140,15 +241,33 @@ const ProfileEditScreen = ({ navigation }) => {
               </View>
             ))}
 
-            {/* Address Dropdown */}
+            {/* Address Dropdowns */}
             <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>TỈNH / THÀNH PHỐ</Text>
                 <TouchableOpacity 
                   style={styles.inputWrapper} 
-                  onPress={() => setShowCityModal(true)}
+                  onPress={() => {
+                    setCitySearchQuery('');
+                    setShowCityModal(true);
+                  }}
                 >
                   <Icon name="city" size={14} color={Colors.muted} style={styles.fieldIcon} />
                   <Text style={styles.input}>{selectedCity}</Text>
+                  <Icon name="chevron-down" size={12} color={Colors.muted} />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>XÃ / PHƯỜNG / THỊ TRẤN</Text>
+                <TouchableOpacity 
+                  style={styles.inputWrapper} 
+                  onPress={() => {
+                    setWardSearchQuery('');
+                    setShowWardModal(true);
+                  }}
+                >
+                  <Icon name="map-marker-alt" size={14} color={Colors.muted} style={styles.fieldIcon} />
+                  <Text style={styles.input}>{selectedWard}</Text>
                   <Icon name="chevron-down" size={12} color={Colors.muted} />
                 </TouchableOpacity>
             </View>
@@ -207,32 +326,90 @@ const ProfileEditScreen = ({ navigation }) => {
             </View>
         </View>
 
-        {/* City Picker Modal */}
-        <Modal visible={showCityModal} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
+        <Modal visible={showCityModal} transparent animationType="slide" onRequestClose={() => setShowCityModal(false)}>
+          <Pressable style={styles.modalContainer} onPress={() => setShowCityModal(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
               <Text style={styles.modalTitle}>Chọn Tỉnh / Thành phố</Text>
+              
+              <View style={styles.modalSearchWrapper}>
+                <Icon name="search" size={14} color={Colors.muted} style={styles.modalSearchIcon} />
+                <TextInput
+                  style={styles.modalSearchInput}
+                  placeholder="Tìm kiếm tỉnh thành..."
+                  value={citySearchQuery}
+                  onChangeText={setCitySearchQuery}
+                  autoFocus={false}
+                />
+              </View>
+
               <FlatList
-                data={CITIES}
-                keyExtractor={(item) => item}
+                data={filteredCities}
+                keyExtractor={(item) => item.code}
                 renderItem={({ item }) => (
                   <TouchableOpacity 
                     style={styles.cityItem} 
                     onPress={() => {
-                      setSelectedCity(item);
+                      setSelectedCity(item.name);
+                      setSelectedCityCode(item.code);
+                      setSelectedWard(''); // Reset ward when city changes
                       setShowCityModal(false);
                     }}
                   >
-                    <Text style={[styles.cityText, selectedCity === item && { color: Colors.secondary }]}>{item}</Text>
-                    {selectedCity === item && <Icon name="check" size={14} color={Colors.secondary} />}
+                    <Text style={[styles.cityText, selectedCity === item.name && { color: Colors.secondary }]}>{item.name}</Text>
+                    {selectedCity === item.name && <Icon name="check" size={14} color={Colors.secondary} />}
                   </TouchableOpacity>
                 )}
+                ListEmptyComponent={
+                  <Text style={styles.emptySearchText}>Không tìm thấy kết quả</Text>
+                }
               />
               <TouchableOpacity style={styles.closeModal} onPress={() => setShowCityModal(false)}>
                 <Text style={styles.closeModalText}>Đóng</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        <Modal visible={showWardModal} transparent animationType="slide" onRequestClose={() => setShowWardModal(false)}>
+          <Pressable style={styles.modalContainer} onPress={() => setShowWardModal(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.modalTitle}>Chọn Xã / Phường</Text>
+
+              <View style={styles.modalSearchWrapper}>
+                <Icon name="search" size={14} color={Colors.muted} style={styles.modalSearchIcon} />
+                <TextInput
+                  style={styles.modalSearchInput}
+                  placeholder="Tìm kiếm xã phường..."
+                  value={wardSearchQuery}
+                  onChangeText={setWardSearchQuery}
+                  autoFocus={false}
+                />
+              </View>
+
+              <FlatList
+                data={filteredWards}
+                keyExtractor={(item) => item.code}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.cityItem} 
+                    onPress={() => {
+                      setSelectedWard(item.name);
+                      setShowWardModal(false);
+                    }}
+                  >
+                    <Text style={[styles.cityText, selectedWard === item.name && { color: Colors.secondary }]}>{item.name}</Text>
+                    {selectedWard === item.name && <Icon name="check" size={14} color={Colors.secondary} />}
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.emptySearchText}>Không tìm thấy kết quả</Text>
+                }
+              />
+              <TouchableOpacity style={styles.closeModal} onPress={() => setShowWardModal(false)}>
+                <Text style={styles.closeModalText}>Đóng</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         <TouchableOpacity
@@ -325,6 +502,22 @@ const styles = StyleSheet.create({
   cityText: { fontSize: 15, fontWeight: '700', color: Colors.primary },
   closeModal: { marginTop: 20, backgroundColor: '#f1f5f9', paddingVertical: 15, borderRadius: 15, alignItems: 'center' },
   closeModalText: { fontSize: 14, fontWeight: '900', color: Colors.muted },
+
+  // Search in Modal Styles
+  modalSearchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  modalSearchIcon: { marginRight: 10, opacity: 0.5 },
+  modalSearchInput: { flex: 1, fontSize: 13, fontWeight: '700', color: Colors.primary },
+  emptySearchText: { textAlign: 'center', padding: 20, color: Colors.muted, fontSize: 13, fontWeight: '600' }
 });
 
 export default ProfileEditScreen;

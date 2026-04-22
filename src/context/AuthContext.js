@@ -12,6 +12,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const isLoggingOut = React.useRef(false);
+
   useEffect(() => {
     loadStoredAuth();
 
@@ -19,18 +21,19 @@ export const AuthProvider = ({ children }) => {
     const interceptor = apiClient.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // Don't trigger auto-logout if the error comes from the login route itself
-        const isLoginRoute = error.config?.url?.includes('/v1/login');
+        const isLoginRoute = error.config?.url?.includes('/v1/login') || error.config?.url?.includes('/v1/register');
         
-        if (error.response?.status === 401 && !isLoginRoute) {
-          await logout();
+        // 🚨 ONLY logout if 401 error, not a login route, we HAVE a user, and NOT already logging out
+        if (error.response?.status === 401 && !isLoginRoute && user && !isLoggingOut.current) {
+          console.log('401 detected, logging out...');
+          await logout(true); // pass true to indicate it was triggered by 401
         }
         return Promise.reject(error);
       }
     );
 
     return () => apiClient.interceptors.response.eject(interceptor);
-  }, []);
+  }, [user]); // Re-bind interceptor when user changes to have correct 'user' in scope
 
   const loadStoredAuth = async () => {
     try {
@@ -99,17 +102,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (isFromInterceptor = false) => {
+    if (isLoggingOut.current) return;
+    isLoggingOut.current = true;
+
     try {
-      await apiClient.post('/v1/logout');
+      // Only call server logout if NOT already triggered by a 401 interceptor
+      if (!isFromInterceptor && token) {
+        await apiClient.post('/v1/logout');
+      }
     } catch (error) {
       // Ignore logout API errors
+    } finally {
+      setUser(null);
+      setToken(null);
+      delete apiClient.defaults.headers.common['Authorization'];
+      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('auth_user');
+      isLoggingOut.current = false;
     }
-    setUser(null);
-    setToken(null);
-    delete apiClient.defaults.headers.common['Authorization'];
-    await AsyncStorage.removeItem('auth_token');
-    await AsyncStorage.removeItem('auth_user');
   };
 
   const socialLogin = async (userData, authToken) => {
@@ -133,8 +144,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await apiClient.put('/v1/profile', data);
       if (response.data.success) {
-        setUser(response.data.data);
-        await AsyncStorage.setItem('auth_user', JSON.stringify(response.data.data));
+        setUser(response.data.user);
+        await AsyncStorage.setItem('auth_user', JSON.stringify(response.data.user));
         return { success: true };
       }
       return { success: false, message: response.data.message };

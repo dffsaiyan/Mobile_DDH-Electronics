@@ -13,16 +13,26 @@ export const WishlistProvider = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const auth = useContext(AuthContext);
   const isLoggedIn = auth ? auth.isLoggedIn : false;
+  const isFetching = React.useRef(false);
+  const lastFetchedToken = React.useRef(null);
 
   useEffect(() => {
     if (isLoggedIn && auth?.token) {
-      fetchWishlistFromApi();
+      // Only fetch if NOT already fetching and token has changed or not yet fetched
+      if (!isFetching.current && lastFetchedToken.current !== auth.token) {
+        fetchWishlistFromApi();
+      }
     } else if (!isLoggedIn) {
       loadWishlistFromStorage();
+      lastFetchedToken.current = null;
     }
   }, [isLoggedIn, auth?.token]);
 
   const fetchWishlistFromApi = async () => {
+    if (isFetching.current) return;
+    isFetching.current = true;
+    lastFetchedToken.current = auth.token;
+
     try {
       const response = await apiClient.get('/v1/wishlist');
       if (response.data.success) {
@@ -34,6 +44,8 @@ export const WishlistProvider = ({ children }) => {
       if (error.response?.status !== 401) {
         console.error('Error fetching wishlist from API:', error.response?.status || error.message);
       }
+    } finally {
+      isFetching.current = false;
     }
   };
 
