@@ -109,20 +109,40 @@ export const WishlistProvider = ({ children }) => {
   };
 
   const clearWishlist = async () => {
-    const itemsToClear = [...wishlistItems];
-    setWishlistItems([]);
-    
-    if (!isLoggedIn) {
+    if (isFetching.current) return false;
+    isFetching.current = true;
+
+    try {
+      // 1. Update UI immediately (Optimistic UI)
+      setWishlistItems([]);
+      
+      // 2. Clear storage (for guest users or as fallback)
       await saveWishlistToStorage([]);
-    } else {
-      // Vì API không có endpoint /clear (404), ta sẽ lặp qua từng item để xóa
-      try {
-        for (const item of itemsToClear) {
-          await apiClient.post(`/v1/wishlist/toggle/${item.id}`);
+      
+      // 3. Sync with server if logged in
+      if (isLoggedIn) {
+        console.log('Syncing wishlist clear with server...');
+        const response = await apiClient.post('/v1/wishlist/clear', {});
+        console.log('Server response:', response.data);
+        
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Server error');
         }
-      } catch (error) {
-        console.error('Error clearing wishlist items one by one:', error);
+
+        // 4. Re-fetch to ensure absolute synchronization with DB
+        // We do this AFTER the clear is confirmed by server
+        isFetching.current = false; // Release lock for the fetch
+        await fetchWishlistFromApi();
       }
+      return true;
+    } catch (error) {
+      console.error('Error clearing wishlist:', error);
+      // If it failed, re-fetch to restore UI state to match server
+      isFetching.current = false;
+      if (isLoggedIn) await fetchWishlistFromApi();
+      throw error;
+    } finally {
+      isFetching.current = false;
     }
   };
 

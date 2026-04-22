@@ -499,13 +499,25 @@ const HomeScreen = ({ navigation }) => {
                           </View>
                         </View>
 
-                        <TouchableOpacity 
-                          style={styles.btnFlashBuy} 
-                          onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
-                        >
-                          <Icon name="bolt" size={12} color="#fff" />
-                          <Text style={styles.btnBuyTextElite}>Mua Ngay</Text>
-                        </TouchableOpacity>
+                        <View style={[styles.cardActions, { marginTop: 15 }]}>
+                          <View style={styles.cardActionRow}>
+                            <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ProductDetail', { product: item })}>
+                              <Icon name="eye" size={10} color={Colors.primary} />
+                              <Text style={styles.btnSecondaryText}>Chi tiết</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.btnSecondary} onPress={() => handleAddToCart(item)}>
+                              <Icon name="cart-plus" size={10} color={Colors.primary} />
+                              <Text style={styles.btnSecondaryText}>+ Giỏ</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.btnFlashBuy} 
+                            onPress={() => { addToCart(item); navigation.navigate('Cart'); }}
+                          >
+                            <Icon name="bolt" size={12} color="#fff" />
+                            <Text style={styles.btnBuyTextElite}>Mua Ngay</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );

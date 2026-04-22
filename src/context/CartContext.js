@@ -2,6 +2,7 @@ import * as React from 'react';
 const { createContext, useState, useContext, useEffect } = React;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../api/apiClient';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
@@ -9,16 +10,16 @@ export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCart();
-  }, []);
+  }, [token]);
 
   const loadCart = async () => {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         try {
           // Fetch from API if logged in

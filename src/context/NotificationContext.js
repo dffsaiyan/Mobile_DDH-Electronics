@@ -57,10 +57,13 @@ export const NotificationProvider = ({ children }) => {
     setConfirm(prev => ({ ...prev, visible: false }));
   };
 
-  const handleConfirm = () => {
-    if (confirm.onConfirm) confirm.onConfirm();
+  const handleConfirm = useCallback(() => {
+    const action = confirm.onConfirm;
     hideConfirm();
-  };
+    if (typeof action === 'function') {
+      action();
+    }
+  }, [confirm.onConfirm]);
 
   const getConfirmTheme = () => {
     switch (confirm.type) {

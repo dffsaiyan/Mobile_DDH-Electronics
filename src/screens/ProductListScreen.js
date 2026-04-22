@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   categoryChipActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
   categoryText: { fontSize: 10, fontWeight: '700', color: '#64748b' },
   categoryTextActive: { color: Colors.white },
-  listContent: { padding: Spacing.m, paddingBottom: 120 },
+  listContent: { padding: Spacing.m, paddingBottom: 20 },
   row: { justifyContent: 'space-between', marginBottom: Spacing.m },
   card: { width: CARD_WIDTH, backgroundColor: Colors.white, borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)' },
   imageContainer: { width: '100%', height: CARD_WIDTH * 0.85, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center' },
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '800', color: Colors.dark, marginBottom: Spacing.xs },
   emptySubtitle: { fontSize: 12, color: Colors.muted, textAlign: 'center' },
 
-  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingVertical: 30 },
+  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingTop: 30, paddingBottom: 10 },
   pageBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.white, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
   pageBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   pageText: { fontSize: 13, fontWeight: '700', color: Colors.primary },

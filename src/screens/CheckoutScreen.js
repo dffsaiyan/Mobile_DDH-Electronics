@@ -4,6 +4,7 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, StatusBar, Alert, ActivityIndicator, Image, Modal, FlatList, Linking
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome5 as Icon } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../styles/Theme';
@@ -39,8 +40,35 @@ const Stepper = ({ currentStep }) => (
 
 const CheckoutScreen = ({ navigation }) => {
   const { cartItems, totalPrice, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { showToast } = useNotification();
+  
+  // 🔄 REFRESH PROFILE FROM SERVER WHEN ENTERING CHECKOUT
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshProfile = async () => {
+        try {
+          const response = await apiClient.get('/v1/profile');
+          if (response.data.success) {
+            // Update auth context manually if needed, or just use local state for this screen
+            const u = response.data.user;
+            setName(u.name || '');
+            setPhone(u.phone || '');
+            setEmail(u.email || '');
+            setAddress(u.address || '');
+            
+            // Trigger location pre-fill if we have codes
+            if (u.province_id && provinces.length > 0) {
+              preFillLocation(u, provinces);
+            }
+          }
+        } catch (e) {
+          console.error('Refresh profile in checkout error:', e);
+        }
+      };
+      refreshProfile();
+    }, [provinces])
+  );
   
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -65,28 +93,62 @@ const CheckoutScreen = ({ navigation }) => {
       .catch(err => console.error('Error fetching provinces:', err));
   }, []);
 
-  useEffect(() => {
-    const fetchSavedLocation = async () => {
-      if (!user?.province_id || provinces.length === 0) return;
-      const foundProvince = provinces.find(p => p.code == user.province_id);
-      if (foundProvince) {
-        setProvince(foundProvince.name);
-        try {
-          const dRes = await fetch(`https://provinces.open-api.vn/api/v2/w/?province=${user.province_id}`);
-          const districtsData = await dRes.json();
-          const subdivisions = Array.isArray(districtsData) ? districtsData : (districtsData.wards || []);
-          setDistricts(subdivisions);
-          if (user.district_id) {
-            const foundDistrict = subdivisions.find(d => d.code == user.district_id || d.name == user.district_id);
-            if (foundDistrict) setDistrict(foundDistrict.name);
-          }
-        } catch (err) {
-          console.error('Error pre-filling districts:', err);
+  const preFillLocation = async (userData, provinceList) => {
+    if (!userData || !provinceList || provinceList.length === 0) return;
+    
+    let pCode = userData.province_id;
+    let dVal = userData.district_id;
+
+    // 🔍 FALLBACK: If IDs are missing, try to parse from the address string
+    if (!pCode && userData.address) {
+      const parts = userData.address.split(', ');
+      if (parts.length >= 3) {
+        const pName = parts[parts.length - 1].trim();
+        const dName = parts[parts.length - 2].trim();
+        const foundP = provinceList.find(p => p.name.includes(pName) || pName.includes(p.name));
+        if (foundP) {
+          pCode = foundP.code;
+          dVal = dName;
         }
       }
-    };
-    fetchSavedLocation();
+    }
+
+    if (!pCode) return;
+
+    const foundProvince = provinceList.find(p => p.code == pCode || p.name == pCode);
+    if (foundProvince) {
+      setProvince(foundProvince.name);
+      try {
+        const dRes = await fetch(`https://provinces.open-api.vn/api/v2/w/?province=${foundProvince.code}`);
+        const districtsData = await dRes.json();
+        const subdivisions = Array.isArray(districtsData) ? districtsData : (districtsData.wards || []);
+        setDistricts(subdivisions);
+        
+        if (dVal) {
+          const foundDistrict = subdivisions.find(d => d.code == dVal || d.name == dVal);
+          if (foundDistrict) setDistrict(foundDistrict.name);
+        }
+      } catch (err) {
+        console.error('Error pre-filling districts:', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (user && provinces.length > 0) {
+      preFillLocation(user, provinces);
+    }
   }, [user, provinces]);
+
+  // Handle case where user is refreshed from server
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setPhone(user.phone || '');
+      setEmail(user.email || '');
+      setAddress(user.address || '');
+    }
+  }, [user]);
 
   const handleProvinceSelect = async (p) => {
     setProvince(p.name);
@@ -138,8 +200,10 @@ const CheckoutScreen = ({ navigation }) => {
       if (response.data.success) {
         await clearCart();
         if (response.data.payment_url) {
+          // Open payment gateway
           Linking.openURL(response.data.payment_url);
-          navigation.replace('HomeTabs'); // Or go to OrderHistory
+          // Go straight to orders history
+          navigation.replace('Orders');
         } else {
           navigation.replace('OrderSuccess', { order: response.data.order });
         }
@@ -183,6 +247,8 @@ const CheckoutScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+      
+      {/* Payment Pending Modal has been removed per user request */}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerSection}>

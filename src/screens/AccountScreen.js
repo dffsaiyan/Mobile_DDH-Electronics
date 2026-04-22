@@ -108,21 +108,20 @@ const AccountScreen = ({ navigation }) => {
             <Text style={styles.menuLabel}>Đơn hàng</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('BlogList')}>
+            <View style={styles.iconCircle}>
+              <Icon name="newspaper" size={20} color="#8b5cf6" />
+            </View>
+            <Text style={styles.menuLabel}>Tin tức</Text>
+          </TouchableOpacity>
+
           {user?.email === 'admin@ddh.com' && (
-            <>
-              <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('BlogList')}>
-                <View style={styles.iconCircle}>
-                  <Icon name="newspaper" size={20} color="#8b5cf6" />
-                </View>
-                <Text style={styles.menuLabel}>Tin tức</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL(`${IMAGE_BASE_URL}/admin`)}>
-                <View style={styles.iconCircle}>
-                  <Icon name="user-shield" size={20} color="#10b981" />
-                </View>
-                <Text style={styles.menuLabel}>Quản trị</Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL(`${IMAGE_BASE_URL}/admin`)}>
+              <View style={styles.iconCircle}>
+                <Icon name="user-shield" size={20} color="#10b981" />
+              </View>
+              <Text style={styles.menuLabel}>Quản trị</Text>
+            </TouchableOpacity>
           )}
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>

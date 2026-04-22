@@ -175,44 +175,6 @@ const OrdersScreen = ({ navigation }) => {
 
   const renderHeader = () => (
     <View>
-      {/* 👤 SIDEBAR-LIKE USER INFO */}
-      <View style={styles.sidebarHeader}>
-        <View style={styles.avatarContainer}>
-          <Image 
-            source={{ uri: getUserAvatar(user) }} 
-            style={styles.avatarImg} 
-          />
-        </View>
-        <Text style={styles.userName}>{user?.name || 'Admin DDH'}</Text>
-        <Text style={styles.userRole}>Thành viên Elite</Text>
-      </View>
-
-      {/* 📋 MENU GRID */}
-      <View style={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('ProfileEdit')}>
-          <Icon name="user-circle" size={16} color="#475569" />
-          <Text style={styles.menuLabel}>Hồ sơ</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.replace('Wishlist')}>
-          <Icon name="heart" size={16} color="#475569" />
-          <Text style={styles.menuLabel}>Yêu thích</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.menuItem, styles.menuItemActive]}>
-          <Icon name="shopping-bag" size={16} color="#fff" />
-          <Text style={[styles.menuLabel, {color: '#fff'}]}>Đơn hàng</Text>
-        </TouchableOpacity>
-        {user?.email === 'admin@ddh.com' && (
-          <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL(`${IMAGE_BASE_URL}/admin`)}>
-            <Icon name="user-shield" size={16} color="#3b82f6" />
-            <Text style={[styles.menuLabel, {color: '#3b82f6'}]}>Quản trị</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Icon name="sign-out-alt" size={16} color="#ef4444" />
-          <Text style={[styles.menuLabel, {color: '#ef4444'}]}>Thoát</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* 🏷️ TITLE WITH ORANGE BAR */}
       <View style={styles.titleRow}>
         <View style={styles.orangeBar} />
@@ -266,7 +228,7 @@ const OrdersScreen = ({ navigation }) => {
               <Icon name="box-open" size={60} color="#e2e8f0" />
               <Text style={styles.emptyTitle}>Chưa có đơn hàng nào!</Text>
               <Text style={styles.emptySubtitle}>Hãy bắt đầu mua sắm để nhận được những ưu đãi Elite hấp dẫn nhất.</Text>
-              <TouchableOpacity style={styles.shopBtn} onPress={() => navigation.navigate('HomeTabs')}>
+              <TouchableOpacity style={styles.shopBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeTabs', params: { screen: 'Home' } }] })}>
                 <Text style={styles.shopBtnText}>MUA SẮM NGAY</Text>
               </TouchableOpacity>
             </View>
