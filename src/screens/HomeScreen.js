@@ -433,7 +433,7 @@ const HomeScreen = ({ navigation }) => {
               <View style={styles.flashHeaderLeft}>
                 <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                   <Image 
-                    source={{ uri: 'https://ddh-electronics.powercapital-hk.space/images/icon/pngtree-3d-lightning-icon-flash-sale-listrik-petir-png-image_17854619.webp' }} 
+                    source={{ uri: 'https://powercapital-hk.space/images/icon/pngtree-3d-lightning-icon-flash-sale-listrik-petir-png-image_17854619.webp' }} 
                     style={styles.flashHeaderIcon}
                     resizeMode="contain"
                   />
